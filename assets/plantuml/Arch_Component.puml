@@ -16,7 +16,25 @@
 !endif
 !$ARCH_COMPONENT_INCLUDED = 1
 
-!include Arch_Container.puml
+' Where the rest of the library is loaded from.
+'
+' Remote use needs absolute URLs: PlantUML does not resolve a relative
+' `!include` against a parent that was itself fetched over http, so a chain of
+' relative includes fails as soon as the entry point is a URL. Local use needs
+' the opposite. So both are provided, switched by a flag, exactly as
+' C4-PlantUML does:
+'
+'   remote (default)  !include <base>/Arch_Container.puml
+'   local             plantuml -DRELATIVE_INCLUDE="." your-diagram.puml
+'
+' Override the base to point at your own fork or a vendored copy:
+'   plantuml -DARCH_INCLUDE_BASE="https://example.com/plantuml" ...
+!$ARCH_INCLUDE_BASE ?= "https://raw.githubusercontent.com/mailtoharutyunyan/archforge/main/assets/plantuml"
+!if %variable_exists("RELATIVE_INCLUDE")
+  !include ./Arch_Container.puml
+!else
+  !include $ARCH_INCLUDE_BASE/Arch_Container.puml
+!endif
 
 !unquoted procedure Component($alias, $label, $techn="", $descr="", $sprite="arch_component")
 rectangle "$archLabel($label, $techn, $descr, $sprite)" <<arch_component>> as $alias
