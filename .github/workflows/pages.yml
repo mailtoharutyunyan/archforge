@@ -1,0 +1,81 @@
+name: Deploy site to GitHub Pages
+
+# Builds the static editor and landing page and publishes them to Pages.
+# The site is entirely static — no server, no database — so this is just
+# "compile TypeScript to ES modules, copy some files, upload the folder".
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/core/**'
+      - 'packages/web/**'
+      - 'examples/**'
+      - 'tools/build-site.mjs'
+      - 'tsconfig*.json'
+      - 'package.json'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two deployments at once, but do let a newer commit supersede an
+# in-flight build rather than queueing behind it.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Verify the icon pack has not been tampered with
+        run: node tools/fetch-icons.mjs --verify
+
+      - name: Typecheck
+        run: npx tsc -p tsconfig.json --noEmit
+
+      - name: Build site
+        run: node tools/build-site.mjs
+
+      - name: Check the built site actually has what it needs
+        run: |
+          set -e
+          for f in index.html app/index.html styles.css landing.css favicon.svg \
+                   preview-light.svg preview-dark.svg .nojekyll \
+                   js/web/src/main.js examples/globex-commerce.arch; do
+            if [ ! -f "site/$f" ]; then
+              echo "::error::missing site/$f"
+              exit 1
+            fi
+          done
+          echo "site contents verified"
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

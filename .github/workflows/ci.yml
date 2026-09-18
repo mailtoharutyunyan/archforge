@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck (node targets)
+        run: npx tsc -p tsconfig.json --noEmit
+
+      - name: Typecheck (browser target)
+        run: npx tsc -p tsconfig.web.json --noEmit
+
+      - name: Unit and end-to-end tests
+        run: npm test
+
+      - name: Vendored icons match their checksums
+        run: node tools/fetch-icons.mjs --verify
+
+      # The tool's own claims, checked against the tool.
+      - name: Examples compile and pass their rules
+        run: |
+          node packages/cli/src/main.ts check examples/payment-platform/architecture.arch
+          node packages/cli/src/main.ts check examples/globex-commerce/architecture.arch
+
+      - name: Every view renders
+        run: |
+          node packages/cli/src/main.ts render examples/globex-commerce/architecture.arch \
+            --all --out /tmp/render-a
+
+      - name: Renders are byte-identical across runs
+        run: |
+          node packages/cli/src/main.ts render examples/globex-commerce/architecture.arch \
+            --all --out /tmp/render-b
+          diff -rq /tmp/render-a /tmp/render-b
+          echo "output is deterministic"
+
+      - name: Drift detection finds the planted undocumented dependency
+        run: |
+          set +e
+          node packages/cli/src/main.ts drift examples/payment-platform/architecture.arch \
+            --repo examples/payment-platform --json > /tmp/drift.json
+          status=$?
+          set -e
+          # Exit code 1 is expected: the example deliberately contains drift.
+          if [ "$status" != "1" ]; then
+            echo "::error::expected exit 1 from a model with known drift, got $status"
+            exit 1
+          fi
+          grep -q 'undocumented-dependency' /tmp/drift.json
+          grep -q 'Redis' /tmp/drift.json
+          echo "drift detection works"
+
+      - name: Reverse engineering round-trips
+        run: |
+          node packages/cli/src/main.ts analyze examples/payment-platform > /tmp/generated.arch
+          node packages/cli/src/main.ts check /tmp/generated.arch
+          echo "a generated model compiles and passes its own rules"
+
+      - name: Exports are produced
+        run: |
+          node packages/cli/src/main.ts render examples/payment-platform/architecture.arch \
+            --all --format puml --out /tmp/puml
+          node packages/cli/src/main.ts render examples/payment-platform/architecture.arch \
+            --all --format mermaid --out /tmp/mmd
+          test -s /tmp/puml/platform.puml
+          test -s /tmp/mmd/platform.mmd
+
+      - name: MCP server responds
+        run: |
+          printf '%s\n' \
+            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
+            '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
+            | node packages/mcp/src/server.ts > /tmp/mcp.out
+          grep -q '"name":"propose"' /tmp/mcp.out
+          grep -q '"name":"drift"' /tmp/mcp.out
+          echo "MCP server exposes its tools"
+
+      - name: Site builds
+        run: node tools/build-site.mjs

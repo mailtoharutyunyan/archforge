@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Archforge editor</title>
+    <meta name="description" content="Model architecture as code and see every C4 view derived live, in your browser." />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <div class="app">
+      <!-- ---------------------------------------------------------- toolbar -->
+      <header class="toolbar">
+        <a class="brand" href="../" title="Back to the home page">
+          <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z" />
+            <path d="M12 7v10M7.5 9.5v5M16.5 9.5v5" class="brand-mark-lines" />
+          </svg>
+          <span class="brand-name">archforge</span>
+        </a>
+
+        <div class="toolbar-group">
+          <button type="button" data-action="new" title="Start from the template">New</button>
+          <button type="button" data-action="example" title="Load the payment platform example">
+            Example
+          </button>
+        </div>
+
+        <div class="toolbar-group">
+          <button type="button" data-action="import" title="Import a .arch or model .json file">
+            Import
+          </button>
+          <label class="select">
+            Export
+            <select data-action="export" aria-label="Export format">
+              <option value="">Choose…</option>
+              <option value="arch">Model source (.arch)</option>
+              <option value="json">Model JSON</option>
+              <option value="svg">Diagram SVG</option>
+              <option value="png">Diagram PNG</option>
+              <option value="puml">PlantUML (.puml)</option>
+              <option value="mermaid">Mermaid (.mmd)</option>
+              <option value="md">Markdown docs</option>
+              <option value="all">Everything (.zip-less bundle)</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="toolbar-group">
+          <button type="button" data-action="analyze" title="Scan a source folder — nothing is uploaded">
+            Analyse folder
+          </button>
+        </div>
+
+        <div class="toolbar-spacer"></div>
+
+        <div class="toolbar-group">
+          <button type="button" data-action="undo" title="Undo (⌘Z)" aria-label="Undo">↶</button>
+          <button type="button" data-action="redo" title="Redo (⇧⌘Z)" aria-label="Redo">↷</button>
+        </div>
+
+        <div class="toolbar-group">
+          <button type="button" data-action="direction" title="Toggle layout direction">
+            <span data-bind="direction">TB</span>
+          </button>
+          <button type="button" data-action="fit" title="Fit to viewport (F)">Fit</button>
+          <button type="button" data-action="focus" title="Canvas only (press \)">Focus</button>
+          <button type="button" data-action="theme" title="Toggle light and dark">Theme</button>
+        </div>
+
+        <div class="status" data-bind="status" role="status" aria-live="polite"></div>
+      </header>
+
+      <!-- ------------------------------------------------------------ body -->
+      <main class="body">
+        <aside class="panel explorer" aria-label="Palette and model explorer">
+          <div class="panel-tabs" role="tablist">
+            <button type="button" class="is-active" data-side="palette" role="tab">Palette</button>
+            <button type="button" data-side="model" role="tab">Model</button>
+          </div>
+          <div class="panel-header">
+            <input
+              type="search"
+              placeholder="Search technologies…"
+              data-bind="filter"
+              aria-label="Search the palette"
+            />
+          </div>
+          <div class="panel-body" data-bind="palette"></div>
+          <div class="panel-body" data-bind="tree" hidden></div>
+        </aside>
+
+        <section class="canvas-area" aria-label="Diagram">
+          <nav class="view-tabs" data-bind="tabs" aria-label="Views"></nav>
+          <div class="canvas" data-bind="canvas" tabindex="0">
+            <div class="canvas-viewport" data-bind="viewport"></div>
+            <div class="canvas-hint" data-bind="hint"></div>
+          </div>
+          <div class="zoom-controls">
+            <button type="button" data-action="zoom-out" aria-label="Zoom out">−</button>
+            <span data-bind="zoom">100%</span>
+            <button type="button" data-action="zoom-in" aria-label="Zoom in">+</button>
+            <button type="button" data-action="reset-pins" title="Clear manual positions">
+              Reset layout
+            </button>
+          </div>
+        </section>
+
+        <aside class="panel inspector" aria-label="Inspector">
+          <div class="panel-header"><span>Inspector</span></div>
+          <div class="panel-body" data-bind="inspector"></div>
+        </aside>
+      </main>
+
+      <div class="splitter" data-bind="splitter" role="separator" aria-orientation="horizontal"
+           aria-label="Resize the source pane" tabindex="0"></div>
+
+      <!-- ----------------------------------------------------------- editor -->
+      <section class="editor-area">
+        <div class="editor-tabs">
+          <button type="button" class="is-active" data-pane="source">Source</button>
+          <button type="button" data-pane="problems">
+            Problems <span class="badge" data-bind="problem-count">0</span>
+          </button>
+          <button type="button" data-pane="checks">
+            Checks <span class="badge" data-bind="violation-count">0</span>
+          </button>
+          <button type="button" data-pane="generated">Generated</button>
+          <div class="toolbar-spacer"></div>
+          <label class="select generated-only" hidden data-bind="generated-controls">
+            Format
+            <select data-bind="generated-format" aria-label="Generated format">
+              <option value="puml">PlantUML</option>
+              <option value="mermaid">Mermaid</option>
+              <option value="json">Model JSON</option>
+              <option value="svg">SVG</option>
+            </select>
+            <button type="button" data-action="copy-generated">Copy</button>
+          </label>
+          <span class="editor-hint" data-bind="editor-hint">
+            the model is the source of truth — edit here
+          </span>
+        </div>
+
+        <div class="editor-panes">
+          <div class="editor-pane is-active" data-pane-body="source">
+            <div class="code-editor">
+              <div class="gutter" data-bind="gutter" aria-hidden="true"></div>
+              <div class="code-scroll" data-bind="code-scroll">
+                <pre class="highlight" data-bind="highlight" aria-hidden="true"></pre>
+                <textarea
+                  class="code-input"
+                  data-bind="code"
+                  spellcheck="false"
+                  autocapitalize="off"
+                  autocomplete="off"
+                  wrap="off"
+                  aria-label="Architecture source"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="editor-pane" data-pane-body="problems">
+            <div class="list" data-bind="problems"></div>
+          </div>
+          <div class="editor-pane" data-pane-body="checks">
+            <div class="list" data-bind="checks"></div>
+          </div>
+          <div class="editor-pane" data-pane-body="generated">
+            <pre class="generated" data-bind="generated"></pre>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <input type="file" data-bind="file-input" accept=".arch,.af,.json" hidden />
+    <input type="file" data-bind="folder-input" webkitdirectory multiple hidden />
+
+    <div class="drop-overlay" data-bind="drop-overlay" hidden>
+      <div class="drop-card">
+        <strong>Drop a source folder to analyse it</strong>
+        <span>Your code is read in this browser tab. Nothing is uploaded.</span>
+      </div>
+    </div>
+
+    <script type="module" src="../js/web/src/main.js"></script>
+    <noscript>
+      <p style="padding: 2rem; font: 14px system-ui">
+        The Archforge editor runs entirely in your browser and needs JavaScript enabled.
+      </p>
+    </noscript>
+  </body>
+</html>

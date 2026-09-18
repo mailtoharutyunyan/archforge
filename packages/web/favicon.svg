@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <!-- The mark: a layered block, read as depth. Uses currentColor-free
+       explicit values so it renders identically as a favicon in any browser. -->
+  <rect width="24" height="24" rx="6" fill="#0b1120"/>
+  <path d="M12 4.2 4.8 8.1v7.8L12 19.8l7.2-3.9V8.1L12 4.2Z"
+        stroke="#38bdf8" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
+  <path d="M12 8.1v7.8M8.4 10v4M15.6 10v4"
+        stroke="#38bdf8" stroke-width="1.3" stroke-linecap="round" opacity="0.55"/>
+</svg>

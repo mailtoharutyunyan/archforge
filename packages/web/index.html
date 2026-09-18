@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Archforge — architecture as code, that can't go stale</title>
+    <meta
+      name="description"
+      content="Model software architecture as code. Derive C4 diagrams, lint the architecture in CI, and detect drift against your real source code. Runs entirely in your browser."
+    />
+    <meta property="og:title" content="Archforge — architecture as code" />
+    <meta
+      property="og:description"
+      content="One model. Derived C4 views. Architecture linting. Drift detection against real code."
+    />
+    <link rel="stylesheet" href="./landing.css" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <header class="nav">
+      <a class="brand" href="./">
+        <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z" />
+          <path d="M12 7v10M7.5 9.5v5M16.5 9.5v5" class="brand-mark-lines" />
+        </svg>
+        <span>archforge</span>
+      </a>
+      <nav class="nav-links">
+        <a href="#how">How it works</a>
+        <a href="#drift">Drift</a>
+        <a href="#agents">AI agents</a>
+        <a href="#cli">CLI</a>
+      </nav>
+      <div class="nav-actions">
+        <button type="button" id="theme-toggle" class="ghost" title="Toggle theme">Theme</button>
+        <a class="button primary" href="./app/">Open the editor</a>
+      </div>
+    </header>
+
+    <!-- ------------------------------------------------------------- hero -->
+    <section class="hero">
+      <div class="hero-text">
+        <h1>Your architecture diagram is a lie three months later.</h1>
+        <p class="lede">
+          Archforge keeps one structured model of your system, derives every C4 view from it,
+          lints it against your own architecture rules, and checks it against your real source
+          code — so the diagram cannot quietly stop being true.
+        </p>
+        <div class="hero-actions">
+          <a class="button primary large" href="./app/">Try the live demo</a>
+          <a class="button large" href="#cli">Use the CLI</a>
+        </div>
+        <p class="hero-note">
+          No account. No upload. Everything runs in this browser tab.
+        </p>
+      </div>
+
+      <div class="hero-visual" aria-hidden="true">
+        <!-- A real render from the engine, not a mockup. -->
+        <div class="frame">
+          <div class="frame-bar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="frame-title">payment-platform · containers</span>
+          </div>
+          <img src="./preview-light.svg" alt="" class="frame-body frame-light" />
+          <img src="./preview-dark.svg" alt="" class="frame-body frame-dark" />
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------- comparison -->
+    <section class="strip">
+      <div class="strip-item">
+        <strong>Freeform drawing tools</strong>
+        <span>The picture is the data. Nothing can check it. It rots.</span>
+      </div>
+      <div class="strip-arrow" aria-hidden="true">→</div>
+      <div class="strip-item accent">
+        <strong>Archforge</strong>
+        <span>The model is the data. Views are derived. CI checks it against code.</span>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- how -->
+    <section id="how" class="section">
+      <h2>One model, every view</h2>
+      <p class="section-lede">
+        Describe the system once. Context, container, component, deployment and sequence views are
+        projections of that model — so a dependency you declare at component level automatically
+        appears, correctly lifted, on the container diagram.
+      </p>
+
+      <div class="split">
+        <pre class="code"><code><span class="k">system</span> payments <span class="s">"Payment Platform"</span> {
+  <span class="k">owner</span> <span class="s">"team-payments"</span>
+
+  <span class="k">container</span> api <span class="s">"Payment API"</span> {
+    <span class="k">technology</span> <span class="s">"Java 21 / Spring Boot"</span>
+    <span class="k">source</span> <span class="s">"services/payment-api"</span>
+  }
+
+  <span class="k">database</span> db <span class="s">"Payments DB"</span> {
+    <span class="k">technology</span> <span class="s">"PostgreSQL 16"</span>
+  }
+}
+
+payments.api -> payments.db <span class="s">"Reads and writes"</span> {
+  <span class="k">technology</span> <span class="s">"JDBC"</span>
+}
+
+<span class="k">views</span> {
+  <span class="k">context</span>   landscape <span class="s">"Landscape"</span> <span class="k">of</span> payments
+  <span class="k">container</span> platform  <span class="s">"Containers"</span> <span class="k">of</span> payments
+}</code></pre>
+
+        <ul class="feature-list">
+          <li>
+            <strong>Stable identifiers</strong>
+            Rename a label without breaking a diff. Ids survive refactors.
+          </li>
+          <li>
+            <strong>Layout is separate</strong>
+            Positions live in their own file. Changing the model never destroys the
+            arrangement you chose; changing the arrangement never looks like a semantic change.
+          </li>
+          <li>
+            <strong>Byte-identical renders</strong>
+            Same model in, same SVG out — on any machine. That is what makes a diagram
+            reviewable in a pull request.
+          </li>
+          <li>
+            <strong>Exports, not lock-in</strong>
+            SVG, PNG, self-contained PlantUML, Mermaid, Markdown docs and the raw JSON model.
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- rules -->
+    <section class="section alt">
+      <h2>Architecture rules that fail the build</h2>
+      <p class="section-lede">
+        Write governance as selectors over the graph, not as a wiki page nobody reads.
+      </p>
+      <div class="split">
+        <pre class="code"><code><span class="k">rules</span> {
+  <span class="k">rule</span> domains <span class="s">"Order must not reach payment internals"</span> {
+    <span class="k">severity</span> error
+    <span class="k">forbid</span> element(tag:domain-order)
+        -> element(tag:internal, tag:domain-payment)
+  }
+
+  <span class="k">rule</span> no-cycles { <span class="k">severity</span> error  <span class="k">forbid</span> cycles }
+
+  <span class="k">rule</span> owned {
+    <span class="k">severity</span> warning
+    <span class="k">require</span> owner <span class="k">on</span> element(kind:container)
+  }
+}</code></pre>
+        <pre class="terminal"><code>$ arch check
+
+<span class="dim">ARCHITECTURE CHECK</span>
+<span class="dim">Payment Platform · 25 elements · 12 relationships · 7 rules</span>
+
+<span class="bad">✗</span> Order Service must not depend on Payment Internals
+    <span class="dim">architecture.arch:148:3</span>
+<span class="warn">⚠</span> Reporting API has no owner
+    <span class="dim">architecture.arch:92:5</span>
+<span class="bad">✗</span> Dependency cycle: Billing → Ledger → Billing
+
+<span class="dim">2 error(s), 1 warning(s), 0 info.</span>
+<span class="dim">exit 1</span></code></pre>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- drift -->
+    <section id="drift" class="section">
+      <h2>The part nobody else does: drift</h2>
+      <p class="section-lede">
+        Bind each container to the directory that implements it. Archforge scans the code and
+        tells you where the documented architecture and the real one have parted ways — with
+        file and line evidence, and an honest confidence class rather than a made-up percentage.
+      </p>
+      <pre class="terminal wide"><code>$ arch drift --repo .
+
+<span class="dim">ARCHITECTURE DRIFT</span>
+<span class="dim">16 files scanned · 12 declared · 9 detected</span>
+
+<span class="bad">✗</span> Payment Worker depends on Redis (redis/client), but no declared relation accounts for it
+    <span class="dim">detector: redis/client · confidence: high</span>
+    <span class="dim">services/payment-worker/.../IdempotencyStore.java:17</span>  private final StringRedisTemplate redis;
+<span class="warn">⚠</span> Payment Worker is declared to depend on Notification Service, but nothing in the code supports it
+<span class="info">i</span>  PaymentController has no source binding, so drift cannot be assessed for it
+
+<span class="dim">6 finding(s), 1 error(s).</span></code></pre>
+      <p class="section-note">
+        Scanners cover Java/Kotlin, JavaScript/TypeScript, Python, Go, .NET, Ruby, PHP and Rust,
+        plus dependency manifests, Dockerfiles, Compose, Kubernetes and Terraform. Adding a stack
+        is a table entry, not a rewrite. Inferred facts are always labelled as inferred —
+        never silently merged into what a human wrote.
+      </p>
+    </section>
+
+    <!-- ---------------------------------------------------------- agents -->
+    <section id="agents" class="section alt">
+      <h2>Built for AI agents, safely</h2>
+      <p class="section-lede">
+        Archforge ships an MCP server, so Claude Code, Cursor or any MCP client can read and
+        change your architecture. Agents do not get a CRUD API over your graph — they propose
+        text and are shown the consequences.
+      </p>
+      <div class="flow">
+        <div class="flow-step"><span class="flow-num">1</span> Agent reads the model and the DSL reference</div>
+        <div class="flow-step"><span class="flow-num">2</span> <code>propose</code> — compiles, validates, diffs. Writes nothing.</div>
+        <div class="flow-step"><span class="flow-num">3</span> A human reads the structural diff</div>
+        <div class="flow-step"><span class="flow-num">4</span> <code>apply confirm=true</code> — only then does anything land</div>
+      </div>
+      <p class="section-note">
+        <code>apply</code> refuses a model that does not compile, and refuses one that breaks an
+        error-severity rule unless a human explicitly overrides it.
+      </p>
+    </section>
+
+    <!-- ------------------------------------------------------------- cli -->
+    <section id="cli" class="section">
+      <h2>Command line and CI</h2>
+      <pre class="terminal wide"><code><span class="dim"># scaffold, then keep it honest in CI</span>
+$ arch init
+$ arch check --recommended
+$ arch render --all --format svg --out docs/diagrams
+$ arch drift --repo .
+$ arch diff main.arch feature.arch --exit-code
+$ arch docs
+
+<span class="dim"># exit codes: 0 clean · 1 findings · 2 usage · 3 model does not compile</span></code></pre>
+      <p class="section-note">
+        Zero runtime dependencies. Node 22.6+ runs the TypeScript directly — there is no build
+        step, no bundler and no database. The web editor is static files.
+      </p>
+    </section>
+
+    <footer class="footer">
+      <div>
+        <strong>archforge</strong>
+        <span>Architecture as code. Apache-2.0.</span>
+      </div>
+      <div class="footer-links">
+        <a href="./app/">Editor</a>
+        <a href="#how">How it works</a>
+        <a href="#agents">MCP</a>
+      </div>
+    </footer>
+
+    <script>
+      // Theme preference, remembered. Inline because it is four lines and a
+      // separate request would cost more than it saves.
+      (function () {
+        var key = 'archforge.theme';
+        var saved = localStorage.getItem(key);
+        if (saved) document.documentElement.dataset.theme = saved;
+        document.getElementById('theme-toggle').addEventListener('click', function () {
+          var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+          document.documentElement.dataset.theme = next;
+          localStorage.setItem(key, next);
+        });
+      })();
+    </script>
+  </body>
+</html>

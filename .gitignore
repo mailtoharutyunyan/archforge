@@ -1,0 +1,17 @@
+node_modules/
+
+# Build output. The site is produced by tools/build-site.mjs and published by
+# GitHub Actions, so it is not committed.
+/site/
+/out/
+/tmp/
+*.tsbuildinfo
+
+# Local tool scratch
+.playwright-mcp/
+.DS_Store
+*.log
+
+# IDE settings
+.idea/
+.vscode/

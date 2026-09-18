@@ -1,0 +1,283 @@
+// Payment Platform — the reference example.
+//
+// This file is the source of truth. Every diagram, document and check is
+// derived from it. Note the `source "..."` bindings: they are what let
+// `arch drift` compare this description against the actual code under
+// services/, and they are the reason the Redis dependency in payment-worker
+// shows up as undocumented rather than being silently accepted.
+
+workspace "Payment Platform" {
+
+  description """
+    Accepts card payments from customers, settles them asynchronously, and
+    notifies downstream systems. Deliberately contains one piece of real
+    architecture drift so the tooling has something to find.
+  """
+
+  prop domain "payments"
+  prop repository "github.com/example/payment-platform"
+
+  // ---------------------------------------------------------------- actors
+
+  person customer "Customer" {
+    description "Buys things and pays for them."
+  }
+
+  person opsEngineer "Operations engineer" {
+    description "Watches dashboards, replays failed payments."
+    tag internal-staff
+  }
+
+  // ---------------------------------------------------------- our platform
+
+  system payments "Payment Platform" {
+    description "Authorises, captures and settles payments."
+    owner "team-payments"
+    tag domain-payment
+
+    container web "Web checkout" {
+      technology "TypeScript / React"
+      description "Single-page checkout flow."
+      kind browser
+      source "services/web-checkout"
+      tag public-facing
+    }
+
+    container api "Payment API" {
+      technology "Java 21 / Spring Boot"
+      description "Validates and authorises payment requests."
+      kind api
+      source "services/payment-api"
+      tag internal
+
+      component controller "PaymentController" {
+        technology "Spring Web"
+        description "REST endpoints for payment intents."
+        kind api
+      }
+
+      component paymentService "PaymentService" {
+        technology "Spring"
+        description "Authorisation and idempotency logic."
+        kind service
+      }
+    }
+
+    container worker "Payment Worker" {
+      technology "Java 21 / Spring Boot"
+      description "Consumes payment events and settles them."
+      source "services/payment-worker"
+      tag internal
+
+      component listener "PaymentEventListener" {
+        technology "Spring Kafka"
+        description "Consumes payment.events."
+        kind service
+      }
+
+      component settlement "SettlementRepository" {
+        technology "Spring Data JDBC"
+        kind service
+      }
+    }
+
+    database db "Payments DB" {
+      technology "PostgreSQL 16"
+      description "Payments, intents and settlement ledger."
+      owner "team-payments"
+      tag stateful
+    }
+
+    topic events "payment.events" {
+      technology "Apache Kafka"
+      description "Payment lifecycle events."
+      tag async
+    }
+  }
+
+  // ------------------------------------------------------ external systems
+
+  system notifications "Notification Service" {
+    description "Sends receipts by email and push."
+    owner "team-growth"
+    tag domain-notification
+  }
+
+  system cardNetwork "Card Network" {
+    description "Visa / Mastercard authorisation network."
+    external
+  }
+
+  system ledger "Finance Ledger" {
+    description "System of record for accounting."
+    owner "team-finance"
+    external
+    tag domain-finance
+  }
+
+  // ------------------------------------------------------------ deployment
+
+  deploymentNode aws "AWS eu-central-1" {
+    technology "AWS"
+
+    deploymentNode vpc "Production VPC" {
+      technology "Amazon VPC"
+
+      deploymentNode publicSubnet "Public subnet" {
+        infrastructureNode alb "Application Load Balancer" {
+          technology "AWS ALB"
+        }
+      }
+
+      deploymentNode privateSubnet "Private subnet" {
+        deploymentNode eks "EKS cluster" {
+          technology "Kubernetes 1.30"
+
+          deploymentNode apiPod "payment-api" {
+            technology "Deployment, 3 replicas"
+            instanceOf payments.api
+            instances "3"
+          }
+
+          deploymentNode workerPod "payment-worker" {
+            technology "Deployment, 2 replicas"
+            instanceOf payments.worker
+            instances "2"
+          }
+        }
+
+        infrastructureNode rds "RDS PostgreSQL" {
+          technology "db.r6g.large, Multi-AZ"
+          instanceOf payments.db
+        }
+
+        infrastructureNode msk "Amazon MSK" {
+          technology "Kafka 3.7"
+          instanceOf payments.events
+        }
+      }
+    }
+  }
+
+  // --------------------------------------------------------- relationships
+
+  customer -> payments.web "Pays for an order" {
+    technology "HTTPS"
+    tag sync
+  }
+
+  opsEngineer -> payments.api "Replays failed payments" {
+    technology "HTTPS / admin API"
+  }
+
+  payments.web -> payments.api.controller "Creates a payment intent" {
+    technology "HTTPS/JSON"
+    tag sync
+  }
+
+  payments.api.controller -> payments.api.paymentService "Delegates"
+
+  payments.api.paymentService -> payments.db "Reads and writes payments" {
+    technology "JDBC"
+  }
+
+  payments.api.paymentService -> payments.events "Publishes payment events" {
+    technology "Kafka producer"
+    tag async
+  }
+
+  payments.api.paymentService -> cardNetwork "Authorises the card" {
+    technology "HTTPS / ISO 8583 gateway"
+    tag sync
+  }
+
+  payments.events -> payments.worker.listener "Delivers payment events" {
+    technology "Kafka consumer"
+    tag async
+  }
+
+  payments.worker.listener -> payments.worker.settlement "Records settlement"
+
+  payments.worker.settlement -> payments.db "Writes the settlement ledger" {
+    technology "JDBC"
+  }
+
+  payments.worker -> notifications "Requests a receipt" {
+    technology "HTTPS/JSON"
+  }
+
+  payments.worker -> ledger "Posts settled payments" {
+    technology "SFTP batch"
+    tag batch
+  }
+
+  // NOTE: payment-worker also talks to Redis in the real code. That is
+  // deliberately NOT declared here — `arch drift` should find it.
+
+  // ----------------------------------------------------------------- views
+
+  views {
+    context landscape "System landscape" of payments
+
+    container platform "Payment Platform — containers" of payments
+
+    component apiInternals "Payment API — components" of payments.api
+
+    component workerInternals "Payment Worker — components" of payments.worker
+
+    deployment production "Production deployment" of aws
+
+    dynamic checkout "Taking a payment" {
+      customer -> payments.web "Submits card details"
+      payments.web -> payments.api.controller "POST /payment-intents"
+      payments.api.controller -> payments.api.paymentService "authorise()"
+      payments.api.paymentService -> cardNetwork "Authorisation request"
+      payments.api.paymentService -> payments.db "Persists the intent"
+      payments.api.paymentService -> payments.events "Emits payment.authorised"
+      payments.events -> payments.worker.listener "Consumes the event"
+      payments.worker.listener -> payments.worker.settlement "Settles"
+      payments.worker.settlement -> payments.db "Writes the ledger entry"
+      payments.worker -> notifications "Sends the receipt"
+    }
+  }
+
+  // ----------------------------------------------------------------- rules
+
+  rules {
+
+    rule no-cycles "Architecture must be acyclic" {
+      severity error
+      forbid cycles
+    }
+
+    rule finance-is-downstream "Nothing in finance may call back into payments" {
+      severity error
+      forbid element(tag:domain-finance) -> element(in:payments)
+    }
+
+    rule no-direct-db-access "Only the owning system may reach the payments database" {
+      severity error
+      forbid element(kind:container) -> element(id:payments.db)
+    }
+
+    rule containers-are-owned "Every container has an owning team" {
+      severity warning
+      require owner on element(kind:container)
+    }
+
+    rule containers-declare-technology "Every container declares its technology" {
+      severity warning
+      require technology on element(kind:container)
+    }
+
+    rule internal-containers-are-bound "Internal containers point at their code" {
+      severity warning
+      require source on element(kind:container, tag:internal)
+    }
+
+    rule no-orphans "Everything is connected to something" {
+      severity warning
+      forbid orphans
+    }
+  }
+}

@@ -1,0 +1,817 @@
+// Globex Commerce — the large reference model.
+//
+// Purpose: exercise the engine at a realistic enterprise scale. Around ninety
+// elements across eight systems, thirty-odd distinct technologies (so icon
+// resolution gets a real workout), a four-level deployment tree, nested
+// component views, two dynamic flows, and governance rules that actually bite.
+//
+// It is also the performance test: if layout, rendering and rule evaluation
+// stay fast and readable here, they will cope with most real organisations.
+
+workspace "Globex Commerce" {
+
+  description """
+    A multi-region commerce platform. Eight systems owned by six teams,
+    deployed to Kubernetes on AWS, with a polyglot estate that grew by
+    acquisition — which is why the stack list is longer than anyone would
+    choose on purpose.
+  """
+
+  prop domain "commerce"
+  prop regions "eu-central-1, us-east-1"
+  prop repository "github.com/globex/platform"
+
+  // ========================================================= people
+
+  person shopper "Shopper" {
+    description "Browses, buys, returns."
+  }
+
+  person seller "Marketplace seller" {
+    description "Lists inventory and fulfils orders."
+  }
+
+  person agent "Support agent" {
+    description "Resolves order and payment issues."
+    tag internal-staff
+  }
+
+  person analyst "Data analyst" {
+    description "Builds reports on trading performance."
+    tag internal-staff
+  }
+
+  person sre "Platform engineer" {
+    description "Operates the platform, responds to incidents."
+    tag internal-staff
+  }
+
+  // ========================================================= storefront
+
+  system storefront "Storefront" {
+    description "Everything a shopper touches."
+    owner "team-storefront"
+    tag domain-storefront
+
+    container web "Web storefront" {
+      technology "TypeScript / Next.js 15"
+      description "Server-rendered catalogue and checkout."
+      kind browser
+      source "apps/web"
+      tag public-facing
+    }
+
+    container ios "iOS app" {
+      technology "Swift / SwiftUI"
+      kind mobileApp
+      source "apps/ios"
+      tag public-facing
+    }
+
+    container android "Android app" {
+      technology "Kotlin / Compose"
+      kind mobileApp
+      source "apps/android"
+      tag public-facing
+    }
+
+    container bff "Storefront BFF" {
+      technology "Node 22 / GraphQL"
+      description "Aggregates back-end services for the clients."
+      kind api
+      source "services/storefront-bff"
+      tag internal
+
+      component schema "GraphQL schema" {
+        technology "GraphQL"
+        kind api
+      }
+
+      component resolvers "Resolvers" {
+        technology "TypeScript"
+        kind service
+      }
+
+      component loaders "Data loaders" {
+        technology "DataLoader"
+        kind service
+      }
+
+      component sessionCache "Session cache" {
+        technology "Redis"
+        kind cache
+      }
+    }
+
+    container cdn "Edge CDN" {
+      technology "AWS CloudFront"
+      kind service
+      tag edge
+    }
+  }
+
+  // ========================================================= commerce core
+
+  system commerce "Commerce Core" {
+    description "Catalogue, cart, orders and pricing."
+    owner "team-commerce"
+    tag domain-commerce
+
+    container catalogue "Catalogue Service" {
+      technology "Java 21 / Spring Boot"
+      description "Products, variants, media."
+      kind api
+      source "services/catalogue"
+      tag internal
+
+      component catalogueApi "CatalogueController" {
+        technology "Spring Web"
+        kind api
+      }
+
+      component productService "ProductService" {
+        technology "Spring"
+        kind service
+      }
+
+      component mediaService "MediaService" {
+        technology "Spring"
+        kind service
+      }
+
+      component catalogueRepo "ProductRepository" {
+        technology "Spring Data JPA"
+        kind service
+      }
+    }
+
+    container cart "Cart Service" {
+      technology "Go 1.23"
+      description "Ephemeral carts, promotions."
+      kind api
+      source "services/cart"
+      tag internal
+    }
+
+    container orders "Order Service" {
+      technology "Java 21 / Spring Boot"
+      description "Order lifecycle and state machine."
+      kind api
+      source "services/orders"
+      tag internal
+
+      component orderApi "OrderController" {
+        technology "Spring Web"
+        kind api
+      }
+
+      component orderSaga "OrderSaga" {
+        technology "Spring StateMachine"
+        kind service
+      }
+
+      component orderRepo "OrderRepository" {
+        technology "Spring Data JPA"
+        kind service
+      }
+    }
+
+    container pricing "Pricing Engine" {
+      technology "Rust 1.82"
+      description "Real-time price and tax resolution."
+      kind service
+      source "services/pricing"
+      tag internal
+    }
+
+    database catalogueDb "Catalogue DB" {
+      technology "PostgreSQL 16"
+      tag stateful
+    }
+
+    database ordersDb "Orders DB" {
+      technology "PostgreSQL 16"
+      tag stateful
+    }
+
+    cache cartCache "Cart store" {
+      technology "Redis 7"
+      tag stateful
+    }
+
+    topic orderEvents "commerce.order.events" {
+      technology "Apache Kafka"
+      tag async
+    }
+
+    topic catalogueEvents "commerce.catalogue.events" {
+      technology "Apache Kafka"
+      tag async
+    }
+  }
+
+  // ========================================================= search
+
+  system search "Search & Discovery" {
+    description "Product search, faceting, recommendations."
+    owner "team-discovery"
+    tag domain-discovery
+
+    container searchApi "Search API" {
+      technology "Python 3.12 / FastAPI"
+      kind api
+      source "services/search-api"
+      tag internal
+    }
+
+    container indexer "Catalogue Indexer" {
+      technology "Python 3.12"
+      description "Consumes catalogue events, maintains the index."
+      kind service
+      source "services/indexer"
+      tag internal
+    }
+
+    container recommender "Recommender" {
+      technology "Python 3.12 / PyTorch"
+      kind service
+      source "services/recommender"
+      tag internal
+    }
+
+    database index "Search index" {
+      technology "Elasticsearch 8"
+      tag stateful
+    }
+
+    cache featureCache "Feature cache" {
+      technology "Redis 7"
+      tag stateful
+    }
+  }
+
+  // ========================================================= payments
+
+  system payments "Payments" {
+    description "Authorisation, capture, refunds, payouts."
+    owner "team-payments"
+    tag domain-payment
+
+    container paymentApi "Payment API" {
+      technology "Java 21 / Spring Boot"
+      kind api
+      source "services/payment-api"
+      tag internal
+      tag pci
+    }
+
+    container settlement "Settlement Worker" {
+      technology "Java 21 / Spring Boot"
+      kind service
+      source "services/settlement"
+      tag internal
+      tag pci
+    }
+
+    container payouts "Seller Payouts" {
+      technology "Kotlin / Ktor"
+      kind service
+      source "services/payouts"
+      tag internal
+    }
+
+    database paymentsDb "Payments DB" {
+      technology "PostgreSQL 16"
+      tag stateful
+      tag pci
+    }
+
+    topic paymentEvents "payments.events" {
+      technology "Apache Kafka"
+      tag async
+    }
+  }
+
+  // ========================================================= fulfilment
+
+  system fulfilment "Fulfilment" {
+    description "Inventory, warehouses, shipping."
+    owner "team-fulfilment"
+    tag domain-fulfilment
+
+    container inventory "Inventory Service" {
+      technology ".NET 9 / ASP.NET Core"
+      kind api
+      source "services/inventory"
+      tag internal
+    }
+
+    container shipping "Shipping Service" {
+      technology ".NET 9 / ASP.NET Core"
+      kind api
+      source "services/shipping"
+      tag internal
+    }
+
+    container warehouseSync "Warehouse Sync" {
+      technology "Python 3.12 / Airflow"
+      description "Nightly reconciliation with warehouse systems."
+      kind service
+      source "jobs/warehouse-sync"
+      tag batch
+    }
+
+    database inventoryDb "Inventory DB" {
+      technology "Microsoft SQL Server 2022"
+      tag stateful
+    }
+
+    queue shippingQueue "shipping.requests" {
+      technology "RabbitMQ 3"
+      tag async
+    }
+  }
+
+  // ========================================================= identity
+
+  system identity "Identity" {
+    description "Accounts, sessions, permissions."
+    owner "team-platform"
+    tag domain-identity
+
+    container authApi "Auth API" {
+      technology "Go 1.23"
+      kind api
+      source "services/auth"
+      tag internal
+    }
+
+    container profile "Profile Service" {
+      technology "Go 1.23"
+      kind api
+      source "services/profile"
+      tag internal
+    }
+
+    database identityDb "Identity DB" {
+      technology "PostgreSQL 16"
+      tag stateful
+    }
+
+    cache sessionStore "Session store" {
+      technology "Redis 7"
+      tag stateful
+    }
+  }
+
+  // ========================================================= analytics
+
+  system analytics "Analytics" {
+    description "Event pipeline, warehouse, dashboards."
+    owner "team-data"
+    tag domain-data
+
+    container collector "Event Collector" {
+      technology "Go 1.23"
+      kind api
+      source "services/collector"
+      tag internal
+    }
+
+    container streamJobs "Stream Processing" {
+      technology "Scala / Apache Spark"
+      kind service
+      source "jobs/streaming"
+      tag internal
+    }
+
+    container dbt "Transformations" {
+      technology "dbt"
+      kind service
+      source "analytics/dbt"
+      tag batch
+    }
+
+    container dashboards "Dashboards" {
+      technology "TypeScript / React"
+      kind browser
+      source "apps/dashboards"
+      tag internal
+    }
+
+    database lake "Event lake" {
+      technology "Amazon S3 / Parquet"
+      tag stateful
+    }
+
+    database warehouse "Warehouse" {
+      technology "ClickHouse 24"
+      tag stateful
+    }
+  }
+
+  // ========================================================= notifications
+
+  system notifications "Notifications" {
+    description "Email, push and SMS delivery."
+    owner "team-growth"
+    tag domain-growth
+
+    container notifier "Notification Service" {
+      technology "Node 22 / NestJS"
+      kind api
+      source "services/notifications"
+      tag internal
+    }
+
+    container templates "Template Store" {
+      technology "MongoDB 7"
+      kind database
+      tag stateful
+    }
+  }
+
+  // ========================================================= observability
+
+  system observability "Observability" {
+    description "Metrics, traces, alerting."
+    owner "team-platform"
+    tag domain-platform
+
+    container prometheus "Metrics" {
+      technology "Prometheus"
+      kind service
+      tag operational
+    }
+
+    container grafana "Grafana" {
+      technology "Grafana"
+      kind browser
+      tag operational
+    }
+
+    container tracing "Tracing" {
+      technology "Jaeger"
+      kind service
+      tag operational
+    }
+  }
+
+  // ========================================================= third parties
+
+  system stripe "Stripe" {
+    description "Card acquiring and payouts."
+    external
+    tag pci
+  }
+
+  system auth0 "Auth0" {
+    description "Federated login and MFA."
+    external
+  }
+
+  system shippo "Shippo" {
+    description "Carrier rates and labels."
+    external
+  }
+
+  system sendgrid "SendGrid" {
+    description "Transactional email delivery."
+    external
+  }
+
+  system snowflake "Snowflake" {
+    description "Group-wide finance reporting warehouse."
+    owner "team-finance"
+    external
+    tag domain-finance
+  }
+
+  // ========================================================= deployment
+
+  deploymentNode aws "AWS" {
+    technology "AWS"
+
+    deploymentNode euCentral "eu-central-1" {
+      technology "AWS Region"
+
+      deploymentNode edge "Edge" {
+        infrastructureNode cloudfront "CloudFront" {
+          technology "AWS CloudFront"
+          instanceOf storefront.cdn
+        }
+        infrastructureNode waf "WAF" {
+          technology "AWS WAF"
+        }
+      }
+
+      deploymentNode vpc "Production VPC" {
+        technology "Amazon VPC"
+
+        deploymentNode publicSubnet "Public subnets" {
+          infrastructureNode alb "Application Load Balancer" {
+            technology "AWS ALB"
+          }
+        }
+
+        deploymentNode privateSubnet "Private subnets" {
+
+          deploymentNode eks "EKS cluster" {
+            technology "Kubernetes 1.31"
+
+            deploymentNode nsStorefront "namespace: storefront" {
+              deploymentNode bffPod "storefront-bff" {
+                technology "Deployment"
+                instanceOf storefront.bff
+                instances "6"
+              }
+            }
+
+            deploymentNode nsCommerce "namespace: commerce" {
+              deploymentNode cataloguePod "catalogue" {
+                technology "Deployment"
+                instanceOf commerce.catalogue
+                instances "4"
+              }
+              deploymentNode ordersPod "orders" {
+                technology "Deployment"
+                instanceOf commerce.orders
+                instances "6"
+              }
+              deploymentNode cartPod "cart" {
+                technology "Deployment"
+                instanceOf commerce.cart
+                instances "8"
+              }
+              deploymentNode pricingPod "pricing" {
+                technology "Deployment"
+                instanceOf commerce.pricing
+                instances "4"
+              }
+            }
+
+            deploymentNode nsPayments "namespace: payments" {
+              deploymentNode paymentPod "payment-api" {
+                technology "Deployment"
+                instanceOf payments.paymentApi
+                instances "4"
+              }
+              deploymentNode settlementPod "settlement" {
+                technology "Deployment"
+                instanceOf payments.settlement
+                instances "2"
+              }
+            }
+
+            deploymentNode nsSearch "namespace: search" {
+              deploymentNode searchPod "search-api" {
+                technology "Deployment"
+                instanceOf search.searchApi
+                instances "6"
+              }
+              deploymentNode indexerPod "indexer" {
+                technology "Deployment"
+                instanceOf search.indexer
+                instances "2"
+              }
+            }
+          }
+
+          infrastructureNode rdsCatalogue "RDS — catalogue" {
+            technology "PostgreSQL, db.r6g.xlarge, Multi-AZ"
+            instanceOf commerce.catalogueDb
+          }
+
+          infrastructureNode rdsOrders "RDS — orders" {
+            technology "PostgreSQL, db.r6g.2xlarge, Multi-AZ"
+            instanceOf commerce.ordersDb
+          }
+
+          infrastructureNode rdsPayments "RDS — payments" {
+            technology "PostgreSQL, db.r6g.xlarge, Multi-AZ"
+            instanceOf payments.paymentsDb
+          }
+
+          infrastructureNode elasticache "ElastiCache" {
+            technology "Redis 7, cluster mode"
+            instanceOf commerce.cartCache
+          }
+
+          infrastructureNode msk "Amazon MSK" {
+            technology "Kafka 3.7, 6 brokers"
+            instanceOf commerce.orderEvents
+          }
+
+          infrastructureNode opensearch "OpenSearch" {
+            technology "Elasticsearch-compatible, 9 nodes"
+            instanceOf search.index
+          }
+
+          infrastructureNode s3Lake "S3 — event lake" {
+            technology "AWS S3"
+            instanceOf analytics.lake
+          }
+        }
+      }
+    }
+
+    deploymentNode usEast "us-east-1" {
+      technology "AWS Region"
+      description "Warm standby."
+
+      deploymentNode drEks "EKS cluster (standby)" {
+        technology "Kubernetes 1.31"
+      }
+      infrastructureNode drRds "RDS read replicas" {
+        technology "PostgreSQL"
+      }
+    }
+  }
+
+  // ========================================================= relationships
+
+  // shoppers and sellers
+  shopper -> storefront.web "Browses and buys" { technology "HTTPS" tag sync }
+  shopper -> storefront.ios "Browses and buys" { technology "HTTPS" tag sync }
+  shopper -> storefront.android "Browses and buys" { technology "HTTPS" tag sync }
+  seller -> storefront.web "Manages listings" { technology "HTTPS" tag sync }
+  agent -> analytics.dashboards "Looks up orders" { technology "HTTPS" }
+  analyst -> analytics.dashboards "Builds reports" { technology "HTTPS" }
+  sre -> observability.grafana "Watches dashboards" { technology "HTTPS" }
+
+  // edge
+  storefront.web -> storefront.cdn "Static assets" { technology "HTTPS" }
+  storefront.ios -> storefront.bff "GraphQL" { technology "HTTPS/GraphQL" tag sync }
+  storefront.android -> storefront.bff "GraphQL" { technology "HTTPS/GraphQL" tag sync }
+  storefront.web -> storefront.bff "GraphQL" { technology "HTTPS/GraphQL" tag sync }
+
+  // bff internals
+  storefront.bff.schema -> storefront.bff.resolvers "Executes"
+  storefront.bff.resolvers -> storefront.bff.loaders "Batches"
+  storefront.bff.resolvers -> storefront.bff.sessionCache "Reads session" { technology "Redis" }
+
+  // bff fan-out
+  storefront.bff.loaders -> commerce.catalogue "Products" { technology "HTTP/JSON" tag sync }
+  storefront.bff.loaders -> commerce.cart "Cart" { technology "gRPC" tag sync }
+  storefront.bff.loaders -> commerce.orders "Orders" { technology "HTTP/JSON" tag sync }
+  storefront.bff.loaders -> search.searchApi "Search" { technology "HTTP/JSON" tag sync }
+  storefront.bff.loaders -> identity.authApi "Token check" { technology "gRPC" tag sync }
+  storefront.bff.loaders -> identity.profile "Profile" { technology "gRPC" tag sync }
+  storefront.bff.loaders -> payments.paymentApi "Payment intents" { technology "HTTP/JSON" tag sync }
+
+  // catalogue internals
+  commerce.catalogue.catalogueApi -> commerce.catalogue.productService "Delegates"
+  commerce.catalogue.catalogueApi -> commerce.catalogue.mediaService "Delegates"
+  commerce.catalogue.productService -> commerce.catalogue.catalogueRepo "Persists"
+  commerce.catalogue.catalogueRepo -> commerce.catalogueDb "SQL" { technology "JDBC" }
+  commerce.catalogue.productService -> commerce.catalogueEvents "Publishes changes" { technology "Kafka" tag async }
+
+  // orders internals
+  commerce.orders.orderApi -> commerce.orders.orderSaga "Starts"
+  commerce.orders.orderSaga -> commerce.orders.orderRepo "Persists"
+  commerce.orders.orderRepo -> commerce.ordersDb "SQL" { technology "JDBC" }
+  commerce.orders.orderSaga -> commerce.orderEvents "Publishes" { technology "Kafka" tag async }
+  commerce.orders.orderSaga -> payments.paymentApi "Authorises" { technology "HTTP/JSON" tag sync }
+  commerce.orders.orderSaga -> fulfilment.inventory "Reserves stock" { technology "HTTP/JSON" tag sync }
+
+  // cart and pricing
+  commerce.cart -> commerce.cartCache "Stores carts" { technology "Redis" }
+  commerce.cart -> commerce.pricing "Prices lines" { technology "gRPC" tag sync }
+  commerce.pricing -> commerce.catalogueDb "Reads price lists" { technology "SQL" }
+
+  // search
+  search.indexer -> commerce.catalogueEvents "Consumes" { technology "Kafka" tag async }
+  search.indexer -> search.index "Indexes" { technology "Elasticsearch REST" }
+  search.searchApi -> search.index "Queries" { technology "Elasticsearch REST" }
+  search.searchApi -> search.recommender "Ranks" { technology "gRPC" }
+  search.recommender -> search.featureCache "Features" { technology "Redis" }
+
+  // payments
+  payments.paymentApi -> payments.paymentsDb "SQL" { technology "JDBC" }
+  payments.paymentApi -> stripe "Authorises cards" { technology "HTTPS" tag sync }
+  payments.paymentApi -> payments.paymentEvents "Publishes" { technology "Kafka" tag async }
+  payments.settlement -> payments.paymentEvents "Consumes" { technology "Kafka" tag async }
+  payments.settlement -> payments.paymentsDb "Ledger" { technology "JDBC" }
+  payments.payouts -> stripe "Pays sellers" { technology "HTTPS" }
+  payments.payouts -> payments.paymentsDb "Reads balances" { technology "JDBC" }
+
+  // fulfilment
+  fulfilment.inventory -> fulfilment.inventoryDb "SQL" { technology "EF Core" }
+  fulfilment.inventory -> commerce.orderEvents "Consumes orders" { technology "Kafka" tag async }
+  fulfilment.shipping -> fulfilment.shippingQueue "Enqueues labels" { technology "AMQP" tag async }
+  fulfilment.shipping -> shippo "Rates and labels" { technology "HTTPS" tag sync }
+  fulfilment.warehouseSync -> fulfilment.inventoryDb "Reconciles" { technology "SQL" tag batch }
+
+  // identity
+  identity.authApi -> identity.identityDb "SQL" { technology "pgx" }
+  identity.authApi -> identity.sessionStore "Sessions" { technology "Redis" }
+  identity.authApi -> auth0 "Federated login" { technology "OIDC" tag sync }
+  identity.profile -> identity.identityDb "SQL" { technology "pgx" }
+
+  // analytics
+  storefront.bff -> analytics.collector "Client events" { technology "HTTPS" tag async }
+  analytics.collector -> analytics.lake "Raw events" { technology "S3 PUT" }
+  analytics.streamJobs -> commerce.orderEvents "Consumes" { technology "Kafka" tag async }
+  analytics.streamJobs -> analytics.lake "Reads and writes" { technology "Parquet" }
+  analytics.dbt -> analytics.warehouse "Models" { technology "SQL" tag batch }
+  analytics.streamJobs -> analytics.warehouse "Loads" { technology "SQL" }
+  analytics.dashboards -> analytics.warehouse "Queries" { technology "SQL" tag sync }
+  analytics.dbt -> snowflake "Publishes finance marts" { technology "SQL" tag batch }
+
+  // notifications
+  notifications.notifier -> commerce.orderEvents "Consumes" { technology "Kafka" tag async }
+  notifications.notifier -> payments.paymentEvents "Consumes" { technology "Kafka" tag async }
+  notifications.notifier -> notifications.templates "Templates" { technology "MongoDB" }
+  notifications.notifier -> sendgrid "Sends email" { technology "HTTPS" }
+
+  // observability
+  observability.prometheus -> commerce.orders "Scrapes metrics" { technology "HTTP" tag ops }
+  observability.prometheus -> payments.paymentApi "Scrapes metrics" { technology "HTTP" tag ops }
+  observability.prometheus -> storefront.bff "Scrapes metrics" { technology "HTTP" tag ops }
+  observability.grafana -> observability.prometheus "Queries" { technology "PromQL" }
+  observability.grafana -> observability.tracing "Links traces" { technology "HTTP" }
+
+  // ========================================================= views
+
+  views {
+    context landscape "Globex — system landscape" of commerce
+
+    container storefrontContainers "Storefront — containers" of storefront
+    container commerceContainers "Commerce Core — containers" of commerce
+    container paymentsContainers "Payments — containers" of payments
+    container searchContainers "Search — containers" of search
+    container analyticsContainers "Analytics — containers" of analytics
+    container fulfilmentContainers "Fulfilment — containers" of fulfilment
+
+    component bffComponents "Storefront BFF — components" of storefront.bff
+    component catalogueComponents "Catalogue — components" of commerce.catalogue
+    component orderComponents "Orders — components" of commerce.orders
+
+    deployment production "Production — eu-central-1" of aws
+
+    dynamic checkout "Placing an order" {
+      shopper -> storefront.web "Confirms the basket"
+      storefront.web -> storefront.bff "checkout mutation"
+      storefront.bff.loaders -> commerce.orders "Creates the order"
+      commerce.orders.orderApi -> commerce.orders.orderSaga "Starts the saga"
+      commerce.orders.orderSaga -> payments.paymentApi "Authorises payment"
+      payments.paymentApi -> stripe "Card authorisation"
+      commerce.orders.orderSaga -> fulfilment.inventory "Reserves stock"
+      commerce.orders.orderSaga -> commerce.orderEvents "order.placed"
+      notifications.notifier -> commerce.orderEvents "Picks up the event"
+      notifications.notifier -> sendgrid "Sends the confirmation"
+    }
+
+    dynamic reindex "Re-indexing a product" {
+      commerce.catalogue.productService -> commerce.catalogueEvents "product.updated"
+      search.indexer -> commerce.catalogueEvents "Consumes"
+      search.indexer -> search.index "Upserts the document"
+      search.searchApi -> search.index "Serves the next query"
+    }
+  }
+
+  // ========================================================= rules
+
+  rules {
+
+    rule no-cycles "Architecture must be acyclic" {
+      severity error
+      forbid cycles
+    }
+
+    rule pci-isolation "Only payment components may touch PCI data" {
+      severity error
+      forbid element(tag:domain-storefront) -> element(tag:pci, kind:database)
+    }
+
+    rule finance-is-downstream "Finance must not call back into the platform" {
+      severity error
+      forbid element(tag:domain-finance) -> element(in:commerce)
+    }
+
+    rule no-cross-domain-databases "A system may only use its own datastores" {
+      severity warning
+      forbid element(in:search) -> element(kind:database, in:commerce)
+    }
+
+    rule containers-are-owned "Every container has an owning team" {
+      severity warning
+      require owner on element(kind:container)
+    }
+
+    rule containers-declare-technology "Every container declares its technology" {
+      severity warning
+      require technology on element(kind:container)
+    }
+
+    rule internal-containers-are-bound "Internal containers point at their code" {
+      severity warning
+      require source on element(kind:container, tag:internal)
+    }
+
+    rule no-orphans "Everything is connected to something" {
+      severity warning
+      forbid orphans
+    }
+  }
+}

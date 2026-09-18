@@ -1,0 +1,31 @@
+{
+  "//": "Browser build. Emits native ES modules that the browser loads directly — no bundler, no server, so the output can be hosted on GitHub Pages as static files.",
+  "compilerOptions": {
+    "target": "es2022",
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "isolatedModules": true,
+
+    "noEmit": false,
+    "outDir": "site/js",
+    "rootDir": "packages",
+    "sourceMap": true,
+    "declaration": false,
+    "skipLibCheck": true
+  },
+  "include": ["packages/web/src/**/*.ts", "packages/core/src/**/*.ts"],
+  "exclude": ["packages/core/src/scan/node.ts", "packages/core/src/index.node.ts"]
+}

@@ -1,0 +1,1060 @@
+/*
+ * Archforge web shell.
+ *
+ * Hand-written CSS, no framework: the app ships as static files to GitHub
+ * Pages, so every kilobyte and every build step has to justify itself. Custom
+ * properties carry the palette so the light and dark themes are one switch
+ * rather than two stylesheets.
+ */
+
+:root {
+  --font-ui: ui-sans-serif, -apple-system, "Segoe UI", Inter, Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+  --radius: 8px;
+  --radius-sm: 5px;
+  --toolbar-h: 48px;
+  /* The canvas is the workspace, so it gets the room. The source pane starts
+     at roughly a quarter of the height and is draggable from there. */
+  --editor-h: 220px;
+  --panel-w: 296px;
+  --transition: 120ms ease;
+}
+
+[data-theme="dark"] {
+  --bg: #0b1120;
+  --bg-raised: #111a2e;
+  --bg-sunken: #070d18;
+  --bg-hover: #1b2740;
+  --bg-active: #23314f;
+  --border: #24314c;
+  --border-strong: #35476b;
+  --ink: #e2e8f0;
+  --ink-muted: #94a3b8;
+  --ink-faint: #64748b;
+  --accent: #38bdf8;
+  --accent-ink: #06121f;
+  --error: #f87171;
+  --warning: #fbbf24;
+  --info: #60a5fa;
+  --success: #34d399;
+  --canvas-bg: #0d1424;
+  --canvas-grid: #16203a;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+
+  --syn-keyword: #c084fc;
+  --syn-string: #86efac;
+  --syn-comment: #55637d;
+  --syn-ident: #e2e8f0;
+  --syn-arrow: #fbbf24;
+  --syn-punct: #7d8ca8;
+  --syn-number: #fca5a5;
+}
+
+[data-theme="light"] {
+  --bg: #ffffff;
+  --bg-raised: #f8fafc;
+  --bg-sunken: #f1f5f9;
+  --bg-hover: #e9eef5;
+  --bg-active: #dde5ef;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --ink: #0f172a;
+  --ink-muted: #475569;
+  --ink-faint: #94a3b8;
+  --accent: #0284c7;
+  --accent-ink: #ffffff;
+  --error: #dc2626;
+  --warning: #b45309;
+  --info: #1d4ed8;
+  --success: #047857;
+  --canvas-bg: #f8fafc;
+  --canvas-grid: #e8eef6;
+  --shadow: 0 6px 20px rgba(15, 23, 42, 0.12);
+
+  --syn-keyword: #7c3aed;
+  --syn-string: #047857;
+  /* Comments carry the explanatory text in a model, so they need to stay
+     readable on white rather than fading to decoration. */
+  --syn-comment: #6b7a8e;
+  --syn-ident: #0f172a;
+  --syn-arrow: #b45309;
+  --syn-punct: #64748b;
+  --syn-number: #b91c1c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.app {
+  display: grid;
+  grid-template-rows: var(--toolbar-h) 1fr auto;
+  height: 100vh;
+}
+
+/* ------------------------------------------------------------------ toolbar */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 14px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 8px;
+  /* It is a link back to the home page, but it should read as a logo. */
+  color: inherit;
+  text-decoration: none;
+}
+
+.brand:hover .brand-name {
+  color: var(--accent);
+}
+
+.brand-mark {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.7;
+  stroke-linejoin: round;
+}
+
+.brand-mark-lines {
+  opacity: 0.55;
+}
+
+.brand-name {
+  font-weight: 640;
+  letter-spacing: -0.01em;
+  font-size: 14px;
+}
+
+.toolbar-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.toolbar-spacer {
+  flex: 1;
+}
+
+button {
+  font: inherit;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+  white-space: nowrap;
+}
+
+button:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
+button:active {
+  background: var(--bg-active);
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
+select,
+input[type="search"] {
+  font: inherit;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+}
+
+.status {
+  font-size: 12px;
+  color: var(--ink-muted);
+  max-width: 34ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status.is-error {
+  color: var(--error);
+}
+
+.status.is-success {
+  color: var(--success);
+}
+
+/* --------------------------------------------------------------------- body */
+
+.body {
+  display: grid;
+  grid-template-columns: var(--panel-w) 1fr var(--panel-w);
+  min-height: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg-raised);
+}
+
+.explorer {
+  border-right: 1px solid var(--border);
+}
+
+.inspector {
+  border-left: 1px solid var(--border);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 620;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+}
+
+.panel-header input[type="search"] {
+  width: 96px;
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.panel-body {
+  flex: 1;
+  overflow: auto;
+  padding: 6px;
+}
+
+/* panel tabs (Palette / Model) */
+
+.panel-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-tabs button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.panel-tabs button.is-active {
+  background: var(--bg-active);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* palette */
+
+.palette-group {
+  margin: 10px 4px 4px;
+  font-size: 10.5px;
+  font-weight: 620;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-faint);
+}
+
+/*
+ * One column, not two. A two-column grid fits more tiles on screen but
+ * truncates the labels, and "Spring Bo…" next to "Kotlin ser…" is not a
+ * palette you can use — the name is the thing you are searching for.
+ */
+.palette-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px;
+}
+
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 7px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: grab;
+  font-size: 11.5px;
+  line-height: 1.25;
+  color: var(--ink-muted);
+  min-width: 0;
+  user-select: none;
+}
+
+.palette-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+  color: var(--ink);
+}
+
+.palette-item:active {
+  cursor: grabbing;
+}
+
+.palette-item.is-dragging {
+  opacity: 0.5;
+}
+
+.palette-icon {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.palette-icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.palette-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Drop feedback on the canvas */
+.canvas.is-drop-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: -6px;
+}
+
+.arch-boundary.is-drop-parent .arch-boundary-shape {
+  stroke: var(--accent) !important;
+  stroke-dasharray: none !important;
+}
+
+/* tree */
+
+.tree-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.tree-item:hover {
+  background: var(--bg-hover);
+}
+
+.tree-item.is-selected {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.tree-item.is-selected .tree-meta {
+  color: var(--accent-ink);
+  opacity: 0.75;
+}
+
+.tree-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  flex: none;
+  background: var(--ink-faint);
+}
+
+.tree-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-meta {
+  color: var(--ink-faint);
+  font-size: 11px;
+  margin-left: auto;
+  flex: none;
+}
+
+/* inspector */
+
+.inspect-title {
+  font-size: 14px;
+  font-weight: 650;
+  margin: 4px 4px 2px;
+}
+
+.inspect-sub {
+  font-size: 11px;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  margin: 0 4px 12px;
+  word-break: break-all;
+}
+
+.inspect-row {
+  display: grid;
+  grid-template-columns: 74px 1fr;
+  gap: 8px;
+  padding: 4px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.inspect-key {
+  color: var(--ink-faint);
+}
+
+.inspect-value {
+  word-break: break-word;
+}
+
+/* Editable inspector fields. Styled as text until focused, so the panel reads
+   as information rather than as a form, but still invites editing. */
+.inspect-input {
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 1px 4px;
+  min-width: 0;
+  width: 100%;
+}
+
+.inspect-input:hover {
+  border-color: var(--border);
+  background: var(--bg);
+}
+
+.inspect-input:focus {
+  border-color: var(--accent);
+  background: var(--bg);
+  outline: none;
+}
+
+.inspect-input::placeholder {
+  color: var(--ink-faint);
+}
+
+.inspect-section {
+  margin: 14px 4px 4px;
+  font-size: 11px;
+  font-weight: 620;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+}
+
+.chip {
+  display: inline-block;
+  padding: 1px 6px;
+  margin: 0 3px 3px 0;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  color: var(--ink-muted);
+  font-size: 11px;
+}
+
+.chip.is-inferred {
+  background: color-mix(in srgb, var(--warning) 22%, transparent);
+  color: var(--warning);
+}
+
+.rel-item {
+  padding: 4px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.rel-item:hover {
+  background: var(--bg-hover);
+}
+
+.rel-arrow {
+  color: var(--accent);
+  font-family: var(--font-mono);
+}
+
+.empty {
+  padding: 20px 10px;
+  color: var(--ink-faint);
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------------- canvas */
+
+.canvas-area {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  background: var(--canvas-bg);
+}
+
+.view-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 8px 0;
+  overflow-x: auto;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--border);
+  scrollbar-width: thin;
+}
+
+.view-tab {
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  padding: 5px 11px;
+  font-size: 12px;
+  color: var(--ink-muted);
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  /* A model can define a dozen views with long titles; cap each tab so the
+     strip stays scannable instead of one title eating the whole strip. */
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: none;
+}
+
+.view-tab:hover {
+  background: var(--bg-hover);
+}
+
+.view-tab.is-active {
+  background: var(--canvas-bg);
+  border-color: var(--border);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.view-tab .kind {
+  color: var(--ink-faint);
+  font-size: 10px;
+  margin-left: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/*
+ * No grid.
+ *
+ * A repeating square grid is what every freeform drawing tool puts here, and
+ * it is purely decorative — it implies a snapping surface we do not have, and
+ * it competes with the diagram for attention. Instead the canvas is a quiet
+ * lit surface: a single soft pool of light behind the drawing that gives depth
+ * and a sense of place while panning, with no pattern to read.
+ *
+ * The information a grid pretends to carry — structure — is carried properly,
+ * by the dependency-depth bands the renderer draws inside the diagram itself.
+ */
+.canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  /* Panning and dragging a node are click-and-drag gestures; without this the
+     browser treats them as text selection and highlights every SVG label. */
+  user-select: none;
+  -webkit-user-select: none;
+  background:
+    radial-gradient(
+      120% 90% at 50% -10%,
+      color-mix(in srgb, var(--accent) 7%, transparent),
+      transparent 62%
+    ),
+    var(--canvas-bg);
+}
+
+.canvas.is-panning {
+  cursor: grabbing;
+}
+
+.canvas-viewport {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.canvas-viewport svg {
+  display: block;
+}
+
+.canvas-hint {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--ink-faint);
+  font-size: 13px;
+  pointer-events: none;
+  text-align: center;
+  padding: 24px;
+  line-height: 1.7;
+}
+
+.zoom-controls {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.zoom-controls button {
+  padding: 2px 8px;
+}
+
+/* dragging feedback drawn by the renderer's interactive classes */
+.arch-node.is-dragging {
+  opacity: 0.85;
+}
+
+/* ----------------------------------------------------------------- splitter */
+
+/*
+ * Drag handle between the canvas and the source pane. People work at very
+ * different ratios — reading a model is canvas-heavy, writing one is
+ * text-heavy — and guessing one fixed split for everybody is how an editor
+ * ends up feeling cramped.
+ */
+.splitter {
+  height: 6px;
+  flex: none;
+  cursor: row-resize;
+  background: var(--bg-raised);
+  border-top: 1px solid var(--border);
+  position: relative;
+}
+
+.splitter::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 34px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--border-strong);
+}
+
+.splitter:hover::after,
+.splitter.is-dragging::after {
+  background: var(--accent);
+}
+
+/* Focus mode: the canvas and nothing else. */
+.app.is-focus .explorer,
+.app.is-focus .inspector,
+.app.is-focus .editor-area,
+.app.is-focus .splitter {
+  display: none;
+}
+
+.app.is-focus .body {
+  grid-template-columns: 1fr;
+  border-bottom: none;
+}
+
+/* ------------------------------------------------------------------- editor */
+
+.editor-area {
+  display: flex;
+  flex-direction: column;
+  height: var(--editor-h);
+  min-height: 140px;
+  background: var(--bg-raised);
+}
+
+.editor-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.editor-tabs button {
+  border: none;
+  background: transparent;
+  color: var(--ink-muted);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+.editor-tabs button.is-active {
+  background: var(--bg-active);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.editor-hint {
+  font-size: 11px;
+  color: var(--ink-faint);
+  padding-right: 4px;
+}
+
+.badge {
+  display: inline-block;
+  min-width: 17px;
+  padding: 0 5px;
+  margin-left: 4px;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  color: var(--ink-muted);
+  font-size: 10px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.badge.is-error {
+  background: var(--error);
+  color: #fff;
+}
+
+.badge.is-warning {
+  background: var(--warning);
+  color: #1a1204;
+}
+
+.editor-panes {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.editor-pane {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+
+.editor-pane.is-active {
+  display: block;
+}
+
+/* code editor: a textarea over a highlighted mirror */
+
+.code-editor {
+  display: flex;
+  height: 100%;
+  background: var(--bg-sunken);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 19px;
+}
+
+.gutter {
+  flex: none;
+  padding: 10px 8px 10px 12px;
+  text-align: right;
+  color: var(--ink-faint);
+  background: var(--bg-sunken);
+  border-right: 1px solid var(--border);
+  user-select: none;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+  min-width: 46px;
+}
+
+.gutter span {
+  display: block;
+}
+
+.gutter span.has-error {
+  color: var(--error);
+  font-weight: 700;
+}
+
+.code-scroll {
+  position: relative;
+  flex: 1;
+  overflow: auto;
+}
+
+.highlight,
+.code-input {
+  margin: 0;
+  padding: 10px 14px;
+  font: inherit;
+  line-height: inherit;
+  white-space: pre;
+  tab-size: 2;
+  border: none;
+}
+
+.highlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: var(--syn-ident);
+  min-height: 100%;
+}
+
+.code-input {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 100%;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--ink);
+  resize: none;
+  outline: none;
+  overflow: hidden;
+}
+
+.code-input::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.tok-keyword {
+  color: var(--syn-keyword);
+  font-weight: 600;
+}
+.tok-string {
+  color: var(--syn-string);
+}
+.tok-comment {
+  color: var(--syn-comment);
+  font-style: italic;
+}
+.tok-arrow {
+  color: var(--syn-arrow);
+  font-weight: 700;
+}
+.tok-punct {
+  color: var(--syn-punct);
+}
+.tok-number {
+  color: var(--syn-number);
+}
+.tok-ident {
+  color: var(--syn-ident);
+}
+
+/* problem and check lists */
+
+.list {
+  height: 100%;
+  overflow: auto;
+  padding: 6px;
+}
+
+.list-item {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  align-items: start;
+}
+
+.list-item:hover {
+  background: var(--bg-hover);
+}
+
+.list-icon {
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.list-icon.is-error {
+  color: var(--error);
+}
+.list-icon.is-warning {
+  color: var(--warning);
+}
+.list-icon.is-info {
+  color: var(--info);
+}
+
+.list-message {
+  line-height: 1.5;
+}
+
+.list-loc {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-left: 6px;
+}
+
+.list-hint {
+  display: block;
+  color: var(--ink-faint);
+  font-size: 11.5px;
+  margin-top: 2px;
+}
+
+.list-rule {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  background: var(--bg-hover);
+  border-radius: 3px;
+  padding: 0 4px;
+  margin-right: 6px;
+}
+
+/* ------------------------------------------------------------ drop overlay */
+
+.drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.drop-overlay[hidden] {
+  display: none;
+}
+
+.drop-card {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  padding: 36px 52px;
+  border: 2px dashed var(--accent);
+  border-radius: 14px;
+  background: var(--bg-raised);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.drop-card span {
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
+/* ------------------------------------------------------------- narrow view */
+
+@media (max-width: 1100px) {
+  .body {
+    grid-template-columns: 1fr;
+  }
+  .explorer,
+  .inspector {
+    display: none;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 6px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Generated-format preview: read-only projections of the model. */
+.generated {
+  height: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  overflow: auto;
+  background: var(--bg-sunken);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-muted);
+  white-space: pre;
+  tab-size: 2;
+}
+
+.select.generated-only[hidden] {
+  display: none;
+}
