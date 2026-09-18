@@ -1058,3 +1058,28 @@ input[type="search"] {
 .select.generated-only[hidden] {
   display: none;
 }
+
+/* A single actionable message, used when the pasted text is a different
+   language entirely. One clear statement beats eighty syntax errors. */
+.notice {
+  margin: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--warning);
+  border-radius: var(--radius);
+  background: var(--bg);
+  max-width: 62ch;
+}
+
+.notice strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.notice p {
+  margin: 0 0 10px;
+  color: var(--ink-muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+}

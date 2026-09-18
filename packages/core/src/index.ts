@@ -49,6 +49,8 @@ export type { CompileResult, SourceFile } from './dsl/compile.ts';
 export { emitWorkspace, emitWorkspaceData } from './dsl/emit.ts';
 export type { EmitOptions } from './dsl/emit.ts';
 export { synthesizeWorkspace } from './scan/synthesize.ts';
+export { importPlantUml, looksLikePlantUml } from './import/plantuml.ts';
+export type { ImportResult } from './import/plantuml.ts';
 export type { SynthesizeOptions } from './scan/synthesize.ts';
 export { parse } from './dsl/parser.ts';
 export { lex } from './dsl/lexer.ts';

@@ -1,0 +1,188 @@
+/*
+ * Split view: code left, diagram right.
+ *
+ * Layered on top of styles.css rather than duplicating it, so the two editors
+ * cannot drift apart visually. Only the shell differs — the canvas, code
+ * editor, tabs and zoom controls are the same components.
+ */
+
+:root {
+  /* A quarter for the text, the rest for the picture. Draggable from there. */
+  --code-w: 25%;
+}
+
+.split-body {
+  overflow: hidden;
+}
+
+.split-app {
+  display: grid;
+  grid-template-rows: var(--toolbar-h) 1fr;
+  height: 100vh;
+}
+
+.split-main {
+  display: grid;
+  grid-template-columns: var(--code-w) 6px 1fr;
+  min-height: 0;
+}
+
+/* ----------------------------------------------------------------- code side */
+
+.split-code {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg-raised);
+  border-right: 1px solid var(--border);
+}
+
+.split-code-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.split-code-title {
+  font-size: 11px;
+  font-weight: 620;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+}
+
+.split-code-head select {
+  font-size: 11.5px;
+  padding: 2px 4px;
+}
+
+.split-editor {
+  flex: 1;
+  min-height: 0;
+}
+
+.split-generated {
+  flex: 1;
+  min-height: 0;
+}
+
+/*
+ * A one-line problem strip rather than a tab you have to go and find. With the
+ * diagram filling the screen, a compile error must be impossible to miss —
+ * otherwise you sit looking at a stale picture wondering why typing changed
+ * nothing.
+ */
+.split-problems {
+  flex: none;
+  max-height: 132px;
+  overflow: auto;
+  border-top: 1px solid var(--border);
+  padding: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.split-problems:empty {
+  display: none;
+}
+
+.split-problem {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  gap: 7px;
+  padding: 3px 5px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.split-problem:hover {
+  background: var(--bg-hover);
+}
+
+.split-problem-icon {
+  font-weight: 700;
+  text-align: center;
+}
+
+.split-problem.is-error .split-problem-icon {
+  color: var(--error);
+}
+.split-problem.is-warning .split-problem-icon {
+  color: var(--warning);
+}
+.split-problem.is-info .split-problem-icon {
+  color: var(--info);
+}
+
+.split-problem-loc {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-left: 5px;
+}
+
+/* ----------------------------------------------------------------- divider */
+
+.split-divider {
+  cursor: col-resize;
+  background: var(--bg-raised);
+  position: relative;
+}
+
+.split-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 34px;
+  border-radius: 2px;
+  background: var(--border-strong);
+}
+
+.split-divider:hover::after,
+.split-divider.is-dragging::after {
+  background: var(--accent);
+}
+
+/* --------------------------------------------------------------- canvas side */
+
+.split-canvas-area {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  background: var(--canvas-bg);
+}
+
+.button-link {
+  display: inline-block;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  text-decoration: none;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.button-link:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
+@media (max-width: 900px) {
+  .split-main {
+    grid-template-columns: 1fr;
+    grid-template-rows: 40% 6px 1fr;
+  }
+  .split-divider {
+    cursor: row-resize;
+  }
+}

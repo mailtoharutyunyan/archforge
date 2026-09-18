@@ -1,0 +1,22 @@
+@startuml taking-a-payment
+!include ../../assets/plantuml/Arch_Dynamic.puml
+
+LAYOUT_TOP_DOWN()
+title Taking a payment — interaction order
+
+Person(customer, "Customer")
+ContainerBrowser(web, "Web checkout", "React")
+ContainerApi(api, "Payment API", "Java 21 / Spring Boot")
+ContainerDb(db, "Payments DB", "PostgreSQL 16")
+ContainerTopic(events, "payment.events", "Apache Kafka")
+Container(worker, "Payment Worker", "Java 21")
+System_Ext(cards, "Card Network")
+
+RelIndex(customer, web, "Submits card details", "HTTPS")
+RelIndex(web, api, "POST /payment-intents", "HTTPS/JSON")
+RelIndex(api, cards, "Authorisation request", "HTTPS")
+RelIndex(api, db, "Persists the intent", "JDBC")
+RelIndex(api, events, "Emits payment.authorised", "Kafka")
+RelIndex(events, worker, "Consumes the event", "Kafka")
+RelIndex(worker, db, "Writes the ledger entry", "JDBC")
+@enduml

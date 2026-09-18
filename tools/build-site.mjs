@@ -57,6 +57,8 @@ const copies = [
   ['packages/web/landing.css', 'landing.css'],
   ['packages/web/styles.css', 'styles.css'],
   ['packages/web/app/index.html', 'app/index.html'],
+  ['packages/web/split/index.html', 'split/index.html'],
+  ['packages/web/split.css', 'split.css'],
   ['packages/web/favicon.svg', 'favicon.svg'],
 ];
 for (const [from, to] of copies) {
@@ -75,6 +77,11 @@ await cp(
   join(root, 'examples/globex-commerce/architecture.arch'),
   join(site, 'examples/globex-commerce.arch'),
 );
+
+// The PlantUML macro library is published as part of the site, so it can be
+// included straight from a URL the way C4-PlantUML is:
+//   !include https://<user>.github.io/<repo>/plantuml/Arch_Container.puml
+await cp(join(root, 'assets/plantuml'), join(site, 'plantuml'), { recursive: true });
 
 // Tells GitHub Pages not to run Jekyll, which would drop paths starting with `_`.
 await writeFile(join(site, '.nojekyll'), '');

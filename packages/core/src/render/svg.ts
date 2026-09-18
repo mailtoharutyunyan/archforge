@@ -378,27 +378,67 @@ function renderBoundary(
   const classes = ['arch-boundary', `arch-kind-${cssToken(element.kind)}`];
   if (element.tags.includes('external')) classes.push('arch-external');
 
+  /*
+   * The boundary is the frame the reader orients by, so it is drawn as a
+   * deliberate object rather than a dashed rectangle with text floating on it:
+   *
+   *   - a soft tinted panel, so nesting reads as depth instead of as clutter
+   *   - a hairline dashed border on the *outside* only, which keeps the inner
+   *     area calm for the nodes that actually carry the information
+   *   - a short accent bar in the element's own kind colour, which identifies
+   *     what kind of boundary it is without spending a word on it
+   *   - the name at full ink weight, and the type as a quiet chip on the right
+   *   - the owning team along the bottom edge, where it is available but never
+   *     competing with the contents
+   */
+  const radius = CORNER + 6;
+  const headerBaseline = BOUNDARY_HEADER - 14;
   const parts: string[] = [];
+
   parts.push(
     `<g class="${classes.join(' ')}"${dataAttributes(element, interactive)} ` +
       `transform="translate(${box.x} ${box.y})">`,
   );
+
   parts.push(
-    `<rect class="arch-boundary-shape" x="0" y="0" width="${box.width}" height="${box.height}" ` +
-      `rx="${CORNER + 4}" ry="${CORNER + 4}"/>`,
+    `<rect class="arch-boundary-shape" x="0.5" y="0.5" width="${box.width - 1}" ` +
+      `height="${box.height - 1}" rx="${radius}" ry="${radius}"/>`,
   );
+
+  // Accent bar: 3px wide, rounded, in the kind colour.
   parts.push(
-    `<text class="arch-boundary-name" x="16" y="${BOUNDARY_HEADER - 12}">${escapeXml(
-      truncateText(element.name, NAME_FONT_SIZE, box.width - 60),
+    `<rect class="arch-boundary-accent" x="14" y="${headerBaseline - 11}" width="3" ` +
+      `height="15" rx="1.5" ry="1.5"/>`,
+  );
+
+  const typeText = (element.subtype ?? element.kind).toUpperCase();
+  const typeWidth = measureText(typeText, 9.5) + 14;
+  const nameLimit = box.width - 40 - typeWidth - 16;
+
+  parts.push(
+    `<text class="arch-boundary-name" x="25" y="${headerBaseline}">${escapeXml(
+      truncateText(element.name, NAME_FONT_SIZE, Math.max(60, nameLimit)),
     )}</text>`,
   );
-  const subtitle = `[${element.subtype ?? element.kind}]`;
+
   parts.push(
-    `<text class="arch-boundary-meta" x="${box.width - 14}" y="${BOUNDARY_HEADER - 12}" ` +
-      `text-anchor="end">${escapeXml(subtitle)}</text>`,
+    `<rect class="arch-boundary-chip" x="${round(box.width - 14 - typeWidth)}" ` +
+      `y="${headerBaseline - 12}" width="${round(typeWidth)}" height="17" rx="8.5" ry="8.5"/>`,
   );
-  // Boundaries deliberately carry no icon: the containers inside them already
-  // show their technologies, and a mark on the frame competes with them.
+  parts.push(
+    `<text class="arch-boundary-chip-text" x="${round(box.width - 14 - typeWidth / 2)}" ` +
+      `y="${headerBaseline}" text-anchor="middle">${escapeXml(typeText)}</text>`,
+  );
+
+  if (element.owner) {
+    parts.push(
+      `<text class="arch-boundary-owner" x="${box.width - 16}" y="${box.height - 12}" ` +
+        `text-anchor="end">${escapeXml(truncateText(element.owner, 9.5, 160))}</text>`,
+    );
+  }
+
+  // Boundaries deliberately carry no technology icon: the containers inside
+  // already show theirs, and a mark on the frame competes with them.
   void showIcons;
   parts.push('</g>');
   return parts.join('\n');
@@ -712,9 +752,18 @@ ${palette}
 .arch-boundary-shape {
   fill: var(--boundary-fill);
   stroke: var(--boundary-stroke);
-  stroke-width: 1.5;
-  stroke-dasharray: 7 5;
+  stroke-width: 1;
+  stroke-dasharray: 5 4;
+  stroke-linecap: round;
 }
+
+/* Accent bar, in the same colour family the nodes of this kind use, so a
+   system frame and the containers inside it read as one family. */
+.arch-boundary-accent { fill: var(--system); }
+.arch-kind-container > .arch-boundary-accent { fill: var(--container); }
+.arch-kind-deploymentNode > .arch-boundary-accent { fill: var(--external); }
+.arch-external > .arch-boundary-accent { fill: var(--external); }
+
 /* The boundary title names the system the reader is inside; at 13px muted it
    was the least legible text on the diagram despite being the most orienting. */
 .arch-boundary-name {
@@ -723,7 +772,23 @@ ${palette}
   font-weight: 660;
   letter-spacing: -0.01em;
 }
-.arch-boundary-meta { fill: var(--boundary-ink); font-size: 10px; opacity: 0.75; }
+
+.arch-boundary-chip {
+  fill: var(--boundary-stroke);
+  opacity: 0.35;
+}
+.arch-boundary-chip-text {
+  fill: var(--boundary-ink);
+  font-size: 9.5px;
+  font-weight: 640;
+  letter-spacing: 0.07em;
+}
+.arch-boundary-owner {
+  fill: var(--boundary-ink);
+  font-size: 9.5px;
+  opacity: 0.7;
+  letter-spacing: 0.03em;
+}
 
 .arch-node-shape {
   fill: var(--system);

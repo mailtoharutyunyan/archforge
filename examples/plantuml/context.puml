@@ -1,0 +1,24 @@
+@startuml payments-context
+' Archforge macro library, included from the repo. On a published site use:
+'   !include https://<you>.github.io/archforge/plantuml/Arch_Context.puml
+!include ../../assets/plantuml/Arch_Context.puml
+
+LAYOUT_TOP_DOWN()
+title Payment Platform — system context
+
+Person(customer, "Customer", "Buys things and pays for them")
+Person_Ext(auditor, "Auditor", "Reviews settlement reports")
+
+System(payments, "Payment Platform", "Authorises, captures and settles payments")
+System_Ext(cards, "Card Network", "Visa / Mastercard authorisation")
+System_Ext(ledger, "Finance Ledger", "System of record for accounting")
+SystemQueue_Ext(bus, "Partner Bus", "Partner event feed")
+
+Rel(customer, payments, "Pays for an order", "HTTPS")
+Rel(payments, cards, "Authorises the card", "HTTPS / ISO 8583")
+Rel(payments, ledger, "Posts settled payments", "SFTP batch")
+Rel_Async(payments, bus, "Publishes events", "AMQP")
+Rel(auditor, ledger, "Reads reports", "HTTPS")
+
+SHOW_LEGEND()
+@enduml

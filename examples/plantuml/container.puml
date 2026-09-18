@@ -1,0 +1,32 @@
+@startuml payments-containers
+!include ../../assets/plantuml/Arch_Container.puml
+
+LAYOUT_TOP_DOWN()
+title Payment Platform — containers
+
+Person(customer, "Customer", "Buys things")
+
+System_Boundary(payments, "Payment Platform") {
+  ContainerBrowser(web, "Web checkout", "TypeScript / React", "Single-page checkout flow")
+  ContainerApi(api, "Payment API", "Java 21 / Spring Boot", "Validates and authorises")
+  Container(worker, "Payment Worker", "Java 21 / Spring Boot", "Settles payments")
+  ContainerDb(db, "Payments DB", "PostgreSQL 16", "Payments and ledger")
+  ContainerCache(cache, "Idempotency cache", "Redis 7")
+  ContainerTopic(events, "payment.events", "Apache Kafka")
+}
+
+System_Ext(cards, "Card Network", "Authorises cards")
+Container_Ext(notify, "Notification Service", "HTTP", "Sends receipts")
+
+Rel(customer, web, "Pays for an order", "HTTPS")
+Rel(web, api, "Creates a payment intent", "HTTPS/JSON")
+Rel(api, db, "Reads and writes", "JDBC")
+Rel(api, cache, "Checks idempotency", "Redis")
+Rel_Async(api, events, "Publishes payment events", "Kafka")
+Rel_Async(events, worker, "Delivers events", "Kafka")
+Rel(worker, db, "Writes the settlement ledger", "JDBC")
+Rel(api, cards, "Authorises the card", "HTTPS")
+Rel(worker, notify, "Requests a receipt", "HTTPS/JSON")
+
+SHOW_LEGEND()
+@enduml

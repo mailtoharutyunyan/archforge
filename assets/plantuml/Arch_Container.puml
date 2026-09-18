@@ -1,0 +1,64 @@
+' Archforge for PlantUML — container level
+'
+'   !include https://<you>.github.io/archforge/plantuml/Arch_Container.puml
+'
+'   Person(customer, "Customer")
+'   System_Boundary(payments, "Payment Platform") {
+'     Container(api, "Payment API", "Java 21 / Spring Boot", "Authorises payments")
+'     ContainerDb(db, "Payments DB", "PostgreSQL 16", "Stores payments")
+'     ContainerQueue(events, "payment.events", "Apache Kafka")
+'   }
+'   Rel(customer, api, "Pays", "HTTPS/JSON")
+'
+' Licence: Apache-2.0.
+
+!if %variable_exists("$ARCH_CONTAINER_INCLUDED")
+!return
+!endif
+!$ARCH_CONTAINER_INCLUDED = 1
+
+!include Arch_Context.puml
+
+!unquoted procedure Container($alias, $label, $techn="", $descr="", $sprite="arch_container")
+rectangle "$archLabel($label, $techn, $descr, $sprite)" <<arch_container>> as $alias
+!endprocedure
+
+!unquoted procedure Container_Ext($alias, $label, $techn="", $descr="", $sprite="arch_external")
+rectangle "$archLabel($label, $techn, $descr, $sprite)" <<arch_external>> as $alias
+!endprocedure
+
+!unquoted procedure ContainerApi($alias, $label, $techn="", $descr="", $sprite="arch_api")
+rectangle "$archLabel($label, $techn, $descr, $sprite)" <<arch_api>> as $alias
+!endprocedure
+
+!unquoted procedure ContainerDb($alias, $label, $techn="", $descr="", $sprite="arch_database")
+database "$archLabel($label, $techn, $descr, $sprite)" <<arch_db>> as $alias
+!endprocedure
+
+!unquoted procedure ContainerDb_Ext($alias, $label, $techn="", $descr="", $sprite="arch_database")
+database "$archLabel($label, $techn, $descr, $sprite)" <<arch_db>> as $alias
+!endprocedure
+
+!unquoted procedure ContainerCache($alias, $label, $techn="", $descr="", $sprite="arch_cache")
+database "$archLabel($label, $techn, $descr, $sprite)" <<arch_cache>> as $alias
+!endprocedure
+
+!unquoted procedure ContainerQueue($alias, $label, $techn="", $descr="", $sprite="arch_queue")
+queue "$archLabel($label, $techn, $descr, $sprite)" <<arch_queue>> as $alias
+!endprocedure
+
+!unquoted procedure ContainerTopic($alias, $label, $techn="", $descr="", $sprite="arch_topic")
+queue "$archLabel($label, $techn, $descr, $sprite)" <<arch_topic>> as $alias
+!endprocedure
+
+!unquoted procedure ContainerBrowser($alias, $label, $techn="", $descr="", $sprite="arch_browser")
+rectangle "$archLabel($label, $techn, $descr, $sprite)" <<arch_container>> as $alias
+!endprocedure
+
+!unquoted procedure ContainerMobile($alias, $label, $techn="", $descr="", $sprite="arch_mobile")
+rectangle "$archLabel($label, $techn, $descr, $sprite)" <<arch_container>> as $alias
+!endprocedure
+
+!unquoted procedure ContainerFunction($alias, $label, $techn="", $descr="", $sprite="arch_function")
+rectangle "$archLabel($label, $techn, $descr, $sprite)" <<arch_container>> as $alias
+!endprocedure

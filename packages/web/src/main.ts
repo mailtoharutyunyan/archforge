@@ -15,6 +15,8 @@
 import {
   ArchModel,
   canonicalJson,
+  importPlantUml,
+  looksLikePlantUml,
   check,
   compileFiles,
   deriveAll,
@@ -1031,7 +1033,62 @@ function renderInspector(): void {
 
 // ------------------------------------------------------- problems and checks
 
+/**
+ * Pasting a PlantUML file into the `.arch` pane used to produce one error per
+ * line — eighty of them — which tells the user nothing except that the tool is
+ * unhappy. It is a different language, and the useful response is to say so
+ * once and offer to convert it.
+ */
+function renderWrongLanguageNotice(): boolean {
+  if (!hasErrors(state.diagnostics)) return false;
+  if (!looksLikePlantUml(state.source)) return false;
+
+  const list = el('problems');
+  const badge = el('problem-count');
+  badge.textContent = '1';
+  badge.className = 'badge is-warning';
+
+  list.innerHTML =
+    '<div class="notice">' +
+    '<strong>This looks like PlantUML, not an .arch model.</strong>' +
+    '<p>They are different languages. Archforge can read C4-PlantUML and turn it ' +
+    'into a model you can lint, diff and drift-check.</p>' +
+    '<button type="button" data-action="convert-puml">Convert to .arch</button>' +
+    '</div>';
+
+  for (const node of list.querySelectorAll('[data-action="convert-puml"]')) {
+    node.addEventListener('click', convertFromPlantUml);
+  }
+  showPane('problems');
+  return true;
+}
+
+function convertFromPlantUml(): void {
+  const result = importPlantUml(state.source, 'pasted.puml');
+  if (result.stats.elements === 0) {
+    setStatus('No C4 elements were found in that PlantUML.', 'error');
+    return;
+  }
+  const model = ArchModel.of(result.workspace);
+  state.undo.push(state.source);
+  state.redo = [];
+  state.source = emitWorkspace(model, { annotateProvenance: false });
+  el<HTMLTextAreaElement>('code').value = state.source;
+  state.pins = {};
+  recompile();
+  window.setTimeout(fitToViewport, 30);
+
+  const notes: string[] = [
+    `${result.stats.elements} elements`,
+    `${result.stats.relationships} relationships`,
+  ];
+  if (result.stats.synthesized > 0) notes.push(`${result.stats.synthesized} added for structure`);
+  if (result.stats.skipped > 0) notes.push(`${result.stats.skipped} lines skipped`);
+  setStatus(`Converted from PlantUML: ${notes.join(', ')}.`, 'success');
+}
+
 function renderProblems(): void {
+  if (renderWrongLanguageNotice()) return;
   const list = el('problems');
   const sorted = sortDiagnostics(state.diagnostics);
   const errors = sorted.filter((d) => d.severity === 'error').length;
@@ -1426,6 +1483,12 @@ function importFile(file: File): void {
   const reader = new FileReader();
   reader.onload = () => {
     const text = String(reader.result ?? '');
+    if (/\.(puml|plantuml|iuml|wsd)$/i.test(file.name) || looksLikePlantUml(text)) {
+      state.source = text;
+      el<HTMLTextAreaElement>('code').value = text;
+      convertFromPlantUml();
+      return;
+    }
     if (file.name.endsWith('.json')) {
       // A model JSON export: re-emit it as DSL so the user gets source they own.
       try {

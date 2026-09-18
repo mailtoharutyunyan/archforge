@@ -1,0 +1,262 @@
+' Archforge for PlantUML — shared foundation
+'
+' This is the C4-PlantUML-style half of Archforge: a macro library you include
+' from a .puml file so you can write C4 diagrams in PlantUML directly, with the
+' same palette and structural glyphs the Archforge renderer uses.
+'
+' You do not need the rest of Archforge to use this. Conversely, if you want
+' architecture linting, drift detection against real source code, or the web
+' editor, model your system in the .arch DSL instead and use `arch render
+' --format puml` to produce PlantUML from it.
+'
+' Do not include this file directly — include one of the level files, which
+' pull this in and add the macros appropriate to that level:
+'
+'   Arch_Context.puml      people and systems
+'   Arch_Container.puml    + containers
+'   Arch_Component.puml    + components
+'   Arch_Deployment.puml   + deployment and infrastructure nodes
+'   Arch_Dynamic.puml      + numbered interactions
+'
+' Licence: Apache-2.0.
+
+!if %variable_exists("$ARCH_COMMON_INCLUDED")
+!return
+!endif
+!$ARCH_COMMON_INCLUDED = 1
+
+!include Arch_Sprites.puml
+
+' ---------------------------------------------------------------- palette
+'
+' The same values the Archforge SVG renderer uses, so a diagram drawn here and
+' one rendered from a model look like the same product.
+
+!$ARCH_PERSON        = "#4F46E5"
+!$ARCH_SYSTEM        = "#2563EB"
+!$ARCH_CONTAINER     = "#0891B2"
+!$ARCH_COMPONENT     = "#0284C7"
+!$ARCH_DATABASE      = "#7C3AED"
+!$ARCH_CACHE         = "#DB2777"
+!$ARCH_QUEUE         = "#D97706"
+!$ARCH_TOPIC         = "#CA8A04"
+!$ARCH_API           = "#0D9488"
+!$ARCH_EXTERNAL      = "#64748B"
+!$ARCH_NODE_BG       = "#E2E8F0"
+!$ARCH_NODE_INK      = "#0F172A"
+
+!$ARCH_INK           = "#0F172A"
+!$ARCH_INK_MUTED     = "#475569"
+!$ARCH_ON_COLOUR     = "#FFFFFF"
+!$ARCH_LINE          = "#94A3B8"
+!$ARCH_BOUNDARY_BG   = "#F8FAFC"
+!$ARCH_BOUNDARY_LINE = "#CBD5E1"
+!$ARCH_BG            = "#FFFFFF"
+
+' Type sizes, matching the renderer's scale.
+!$ARCH_NAME_SIZE  = 13
+!$ARCH_META_SIZE  = 10
+!$ARCH_DESCR_SIZE = 10
+!$ARCH_REL_SIZE   = 10
+
+' ------------------------------------------------------------------ labels
+
+' Builds an element label: optional sprite, bold name, [technology], italic
+' description. Empty parts are omitted rather than leaving blank lines, which
+' is what keeps a label with no description from looking broken.
+!function $archLabel($label, $techn="", $descr="", $sprite="")
+  !$out = ""
+  !if (%strlen($sprite) > 0)
+    !$out = $out + "<$" + $sprite + ">\n"
+  !endif
+  !$out = $out + "<b>" + $label + "</b>"
+  !if (%strlen($techn) > 0)
+    !$out = $out + "\n<size:" + $ARCH_META_SIZE + ">[" + $techn + "]</size>"
+  !endif
+  !if (%strlen($descr) > 0)
+    !$out = $out + "\n<size:" + $ARCH_DESCR_SIZE + "><i>" + $descr + "</i></size>"
+  !endif
+  !return $out
+!endfunction
+
+' Boundary label: name plus a quiet type line.
+!function $archBoundaryLabel($label, $type)
+  !$out = "<b>" + $label + "</b>"
+  !if (%strlen($type) > 0)
+    !$out = $out + "\n<size:" + $ARCH_META_SIZE + ">[" + $type + "]</size>"
+  !endif
+  !return $out
+!endfunction
+
+' Relationship label: description plus optional [technology].
+!function $archRelLabel($label, $techn="")
+  !$out = $label
+  !if (%strlen($techn) > 0)
+    !$out = $out + "\n<size:" + $ARCH_REL_SIZE + ">[" + $techn + "]</size>"
+  !endif
+  !return $out
+!endfunction
+
+' ------------------------------------------------------------------ styling
+
+' Stereotypes carry the styling but must not be drawn: «arch_container» printed
+' on every box is scaffolding leaking into the output.
+hide stereotype
+
+skinparam backgroundColor $ARCH_BG
+skinparam defaultFontName "Helvetica Neue"
+skinparam defaultFontSize 12
+skinparam defaultTextAlignment left
+skinparam shadowing false
+skinparam roundCorner 10
+skinparam nodesep 42
+skinparam ranksep 56
+skinparam wrapWidth 220
+
+skinparam ArrowColor $ARCH_LINE
+skinparam ArrowFontColor $ARCH_INK_MUTED
+skinparam ArrowFontSize $ARCH_REL_SIZE
+skinparam ArrowThickness 1.4
+
+skinparam rectangle {
+  FontColor $ARCH_ON_COLOUR
+  BorderThickness 1
+
+  BackgroundColor<<arch_system>> $ARCH_SYSTEM
+  BorderColor<<arch_system>> $ARCH_SYSTEM
+  BackgroundColor<<arch_container>> $ARCH_CONTAINER
+  BorderColor<<arch_container>> $ARCH_CONTAINER
+  BackgroundColor<<arch_component>> $ARCH_COMPONENT
+  BorderColor<<arch_component>> $ARCH_COMPONENT
+  BackgroundColor<<arch_api>> $ARCH_API
+  BorderColor<<arch_api>> $ARCH_API
+  BackgroundColor<<arch_external>> $ARCH_EXTERNAL
+  BorderColor<<arch_external>> $ARCH_EXTERNAL
+
+  BackgroundColor<<arch_node>> $ARCH_NODE_BG
+  BorderColor<<arch_node>> $ARCH_EXTERNAL
+  FontColor<<arch_node>> $ARCH_NODE_INK
+
+  ' Boundaries: a light panel with a dashed hairline, so nesting reads as
+  ' depth rather than as another box competing with its contents.
+  BackgroundColor<<arch_boundary>> $ARCH_BOUNDARY_BG
+  BorderColor<<arch_boundary>> $ARCH_BOUNDARY_LINE
+  FontColor<<arch_boundary>> $ARCH_INK
+  BorderStyle<<arch_boundary>> dashed
+}
+
+skinparam database {
+  FontColor $ARCH_ON_COLOUR
+  BackgroundColor<<arch_db>> $ARCH_DATABASE
+  BorderColor<<arch_db>> $ARCH_DATABASE
+  BackgroundColor<<arch_cache>> $ARCH_CACHE
+  BorderColor<<arch_cache>> $ARCH_CACHE
+}
+
+skinparam queue {
+  FontColor $ARCH_ON_COLOUR
+  BackgroundColor<<arch_queue>> $ARCH_QUEUE
+  BorderColor<<arch_queue>> $ARCH_QUEUE
+  BackgroundColor<<arch_topic>> $ARCH_TOPIC
+  BorderColor<<arch_topic>> $ARCH_TOPIC
+}
+
+skinparam actor {
+  BackgroundColor<<arch_person>> $ARCH_PERSON
+  BorderColor<<arch_person>> $ARCH_PERSON
+  FontColor $ARCH_INK
+}
+
+skinparam legend {
+  BackgroundColor $ARCH_BOUNDARY_BG
+  BorderColor $ARCH_BOUNDARY_LINE
+  FontColor $ARCH_INK_MUTED
+  FontSize 10
+}
+
+' ----------------------------------------------------------------- layout
+
+!unquoted procedure LAYOUT_TOP_DOWN()
+top to bottom direction
+!endprocedure
+
+!unquoted procedure LAYOUT_LEFT_RIGHT()
+left to right direction
+!endprocedure
+
+!unquoted procedure LAYOUT_WITH_LEGEND()
+!$ARCH_SHOW_LEGEND = 1
+!endprocedure
+
+' --------------------------------------------------------------- boundaries
+'
+' Boundaries are `!unquoted` so the caller's `{` attaches to the expansion:
+'
+'   System_Boundary(payments, "Payments") {
+'     Container(api, "Payment API", "Java")
+'   }
+
+!unquoted procedure Boundary($alias, $label, $type="")
+rectangle "$archBoundaryLabel($label, $type)" <<arch_boundary>> as $alias
+!endprocedure
+
+!unquoted procedure System_Boundary($alias, $label)
+rectangle "$archBoundaryLabel($label, "system")" <<arch_boundary>> as $alias
+!endprocedure
+
+!unquoted procedure Container_Boundary($alias, $label)
+rectangle "$archBoundaryLabel($label, "container")" <<arch_boundary>> as $alias
+!endprocedure
+
+!unquoted procedure Enterprise_Boundary($alias, $label)
+rectangle "$archBoundaryLabel($label, "enterprise")" <<arch_boundary>> as $alias
+!endprocedure
+
+' ------------------------------------------------------------ relationships
+
+!unquoted procedure Rel($from, $to, $label="", $techn="")
+$from --> $to : $archRelLabel($label, $techn)
+!endprocedure
+
+!unquoted procedure Rel_Back($from, $to, $label="", $techn="")
+$from <-- $to : $archRelLabel($label, $techn)
+!endprocedure
+
+!unquoted procedure BiRel($from, $to, $label="", $techn="")
+$from <--> $to : $archRelLabel($label, $techn)
+!endprocedure
+
+!unquoted procedure Rel_D($from, $to, $label="", $techn="")
+$from -down-> $to : $archRelLabel($label, $techn)
+!endprocedure
+
+!unquoted procedure Rel_U($from, $to, $label="", $techn="")
+$from -up-> $to : $archRelLabel($label, $techn)
+!endprocedure
+
+!unquoted procedure Rel_L($from, $to, $label="", $techn="")
+$from -left-> $to : $archRelLabel($label, $techn)
+!endprocedure
+
+!unquoted procedure Rel_R($from, $to, $label="", $techn="")
+$from -right-> $to : $archRelLabel($label, $techn)
+!endprocedure
+
+' An async relationship, drawn dashed to match the renderer's `tag async`.
+!unquoted procedure Rel_Async($from, $to, $label="", $techn="")
+$from ..> $to : $archRelLabel($label, $techn)
+!endprocedure
+
+' ----------------------------------------------------------------- legend
+
+!unquoted procedure SHOW_LEGEND()
+legend right
+  |<back:$ARCH_PERSON>   </back>| person |
+  |<back:$ARCH_SYSTEM>   </back>| system |
+  |<back:$ARCH_CONTAINER>   </back>| container |
+  |<back:$ARCH_COMPONENT>   </back>| component |
+  |<back:$ARCH_DATABASE>   </back>| database |
+  |<back:$ARCH_QUEUE>   </back>| queue / topic |
+  |<back:$ARCH_EXTERNAL>   </back>| external |
+endlegend
+!endprocedure

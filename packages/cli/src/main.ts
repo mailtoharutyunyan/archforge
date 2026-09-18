@@ -37,6 +37,8 @@ import {
   renderSvg,
   serializeLayout,
   emitWorkspace,
+  importPlantUml,
+  looksLikePlantUml,
   sortDiagnostics,
   synthesizeWorkspace,
   toMermaid,
@@ -635,6 +637,59 @@ async function commandAnalyze(args: Args): Promise<void> {
   );
 }
 
+/**
+ * Converts a PlantUML diagram into a `.arch` model.
+ *
+ * The migration path for the many teams who already have C4-PlantUML files:
+ * read what they have, produce a model they own, and be explicit about
+ * anything invented or dropped along the way.
+ */
+async function commandImport(args: Args): Promise<void> {
+  const input = args.positionals[0];
+  if (!input) fail('usage: arch import <file.puml> [--out model.arch]');
+
+  let text: string;
+  try {
+    text = await readFile(resolve(input), 'utf8');
+  } catch {
+    return fail(`cannot read ${input}`);
+  }
+
+  if (!looksLikePlantUml(text)) {
+    process.stderr.write(
+      `${yellow(ICON_WARN)} ${input} does not look like PlantUML; importing anyway.\n`,
+    );
+  }
+
+  const result = importPlantUml(text, relative(process.cwd(), resolve(input)));
+  reportDiagnostics(result.diagnostics);
+
+  if (result.stats.elements === 0) {
+    return fail('no C4 elements were found, so there is nothing to import', 1);
+  }
+
+  const source = emitWorkspace(new ArchModel(result.workspace), { annotateProvenance: false });
+  const outPath = flagString(args, 'out');
+  if (outPath) {
+    await mkdir(dirname(resolve(outPath)), { recursive: true });
+    await writeFile(resolve(outPath), source, 'utf8');
+  } else {
+    process.stdout.write(source);
+  }
+
+  process.stderr.write(
+    `\n${dim('—')} ${result.stats.elements} elements, ${result.stats.relationships} relationships\n` +
+      (result.stats.synthesized > 0
+        ? `${dim('—')} ${result.stats.synthesized} element(s) added so the structure is valid\n`
+        : '') +
+      (result.stats.skipped > 0
+        ? `${dim('—')} ${result.stats.skipped} line(s) not understood (listed above)\n`
+        : '') +
+      (outPath ? `${green(ICON_OK)} ${outPath}\n` : '') +
+      `\n${dim('Everything is tagged `imported`. Review it, then run `arch check`.')}\n`,
+  );
+}
+
 async function commandDocs(args: Args): Promise<void> {
   const model = await loadModel(args.positionals);
   const views = deriveAll(model);
@@ -781,6 +836,7 @@ ${bold('COMMANDS')}
   views [sources]         list derived views
   render [sources]        render diagrams (--format svg|puml|mermaid|json)
   analyze [repo]          reverse-engineer a repository into a .arch model
+  import <file.puml>      convert a C4-PlantUML diagram into a .arch model
   diff <before> <after>   structural diff between two models
   impact [sources] <id>   what depends on an element, directly and transitively
   drift [sources] --repo  compare the model against real source code
@@ -831,6 +887,8 @@ async function main(): Promise<void> {
     case 'analyze':
     case 'analyse':
       return commandAnalyze(args);
+    case 'import':
+      return commandImport(args);
     case 'diff':
       return commandDiff(args);
     case 'impact':

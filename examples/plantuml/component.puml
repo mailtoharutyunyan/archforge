@@ -1,0 +1,25 @@
+@startuml payment-api-components
+!include ../../assets/plantuml/Arch_Component.puml
+
+LAYOUT_TOP_DOWN()
+title Payment API — components
+
+ContainerBrowser(web, "Web checkout", "React")
+
+Container_Boundary(api, "Payment API") {
+  ComponentApi(controller, "PaymentController", "Spring Web", "REST endpoints")
+  ComponentService(service, "PaymentService", "Spring", "Authorisation and idempotency")
+  ComponentDb(repo, "PaymentRepository", "Spring Data JPA", "Persistence")
+  ComponentQueue(publisher, "PaymentEventPublisher", "Spring Kafka")
+}
+
+ContainerDb(db, "Payments DB", "PostgreSQL 16")
+ContainerTopic(events, "payment.events", "Apache Kafka")
+
+Rel(web, controller, "POST /payment-intents", "HTTPS/JSON")
+Rel(controller, service, "Delegates")
+Rel(service, repo, "Persists")
+Rel(repo, db, "SQL", "JDBC")
+Rel(service, publisher, "Emits")
+Rel_Async(publisher, events, "Publishes", "Kafka")
+@enduml

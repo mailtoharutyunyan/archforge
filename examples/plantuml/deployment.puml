@@ -1,0 +1,23 @@
+@startuml payments-deployment
+!include ../../assets/plantuml/Arch_Deployment.puml
+
+LAYOUT_TOP_DOWN()
+title Payment Platform — production deployment
+
+Deployment_Node(aws, "AWS", "eu-central-1") {
+  Deployment_Node(vpc, "Production VPC", "Amazon VPC") {
+    Infrastructure_Node(alb, "Application Load Balancer", "AWS ALB")
+    Deployment_Node(eks, "EKS cluster", "Kubernetes 1.31") {
+      Container(apiPod, "Payment API", "Java 21", "3 replicas")
+      Container(workerPod, "Payment Worker", "Java 21", "2 replicas")
+    }
+    Infrastructure_Node(rds, "RDS PostgreSQL", "db.r6g.large, Multi-AZ")
+    Infrastructure_Node(msk, "Amazon MSK", "Kafka 3.7")
+  }
+}
+
+Rel(alb, apiPod, "Routes", "HTTPS")
+Rel(apiPod, rds, "Reads and writes", "JDBC")
+Rel_Async(apiPod, msk, "Publishes", "Kafka")
+Rel_Async(msk, workerPod, "Delivers", "Kafka")
+@enduml

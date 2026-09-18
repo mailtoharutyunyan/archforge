@@ -1,0 +1,43 @@
+' Archforge for PlantUML — component level
+'
+'   !include https://<you>.github.io/archforge/plantuml/Arch_Component.puml
+'
+'   Container_Boundary(api, "Payment API") {
+'     Component(controller, "PaymentController", "Spring Web", "REST endpoints")
+'     Component(service, "PaymentService", "Spring", "Authorisation logic")
+'     ComponentDb(repo, "PaymentRepository", "Spring Data JPA")
+'   }
+'   Rel(controller, service, "Delegates")
+'
+' Licence: Apache-2.0.
+
+!if %variable_exists("$ARCH_COMPONENT_INCLUDED")
+!return
+!endif
+!$ARCH_COMPONENT_INCLUDED = 1
+
+!include Arch_Container.puml
+
+!unquoted procedure Component($alias, $label, $techn="", $descr="", $sprite="arch_component")
+rectangle "$archLabel($label, $techn, $descr, $sprite)" <<arch_component>> as $alias
+!endprocedure
+
+!unquoted procedure Component_Ext($alias, $label, $techn="", $descr="", $sprite="arch_external")
+rectangle "$archLabel($label, $techn, $descr, $sprite)" <<arch_external>> as $alias
+!endprocedure
+
+!unquoted procedure ComponentApi($alias, $label, $techn="", $descr="", $sprite="arch_api")
+rectangle "$archLabel($label, $techn, $descr, $sprite)" <<arch_api>> as $alias
+!endprocedure
+
+!unquoted procedure ComponentDb($alias, $label, $techn="", $descr="", $sprite="arch_database")
+database "$archLabel($label, $techn, $descr, $sprite)" <<arch_db>> as $alias
+!endprocedure
+
+!unquoted procedure ComponentQueue($alias, $label, $techn="", $descr="", $sprite="arch_queue")
+queue "$archLabel($label, $techn, $descr, $sprite)" <<arch_queue>> as $alias
+!endprocedure
+
+!unquoted procedure ComponentService($alias, $label, $techn="", $descr="", $sprite="arch_service")
+rectangle "$archLabel($label, $techn, $descr, $sprite)" <<arch_component>> as $alias
+!endprocedure
