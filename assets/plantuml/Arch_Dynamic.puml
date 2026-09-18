@@ -14,7 +14,7 @@
 '
 ' Licence: Apache-2.0.
 
-!if %variable_exists("$ARCH_DYNAMIC_INCLUDED")
+!if %variable_exists("ARCH_DYNAMIC_INCLUDED")
 !return
 !endif
 !$ARCH_DYNAMIC_INCLUDED = 1
