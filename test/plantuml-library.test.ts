@@ -31,11 +31,9 @@ function render(puml: string): { text: string; svg: string } {
     const file = join(dir, 'diagram.puml');
     writeFileSync(file, puml);
 
-    const result = spawnSync(
-      'plantuml',
-      ['-DRELATIVE_INCLUDE=.', '-tsvg', '-o', dir, file],
-      { encoding: 'utf8' },
-    );
+    // No flags: the published files are self-contained, and that is precisely
+    // what has to keep working for someone including them from a URL.
+    const result = spawnSync('plantuml', ['-tsvg', '-o', dir, file], { encoding: 'utf8' });
     assert.equal(result.status, 0, `plantuml failed: ${result.stderr}`);
 
     const svgName = readdirSync(dir).find((name) => name.endsWith('.svg'));
@@ -234,8 +232,27 @@ test('every shipped example renders', { skip: SKIP }, () => {
   }
 });
 
+test('the published files are self-contained', { skip: SKIP }, () => {
+  // One include must be enough. A nested `!include` would break remote use,
+  // because PlantUML does not resolve a relative include against a parent
+  // fetched over http.
+  for (const name of [
+    'Arch_Context.puml',
+    'Arch_Container.puml',
+    'Arch_Component.puml',
+    'Arch_Deployment.puml',
+    'Arch_Dynamic.puml',
+  ]) {
+    const text = readFileSync(join(LIB, name), 'utf8');
+    const includes = text.split('\n').filter((line) => /^!include/.test(line.trim()));
+    assert.deepEqual(includes, [], `${name} must not include anything`);
+    assert.ok(text.includes('sprite $arch_'), `${name} must carry its own sprites`);
+    assert.ok(text.includes('!unquoted procedure Rel('), `${name} must carry the Rel macros`);
+  }
+});
+
 test('the generated sprite file is valid and complete', { skip: SKIP }, () => {
-  const sprites = readFileSync(join(LIB, 'Arch_Sprites.puml'), 'utf8');
+  const sprites = readFileSync(join(LIB, 'src', 'Arch_Sprites.puml'), 'utf8');
   const names = [...sprites.matchAll(/^sprite \$(\w+) \[(\d+)x(\d+)\/16\]/gm)];
   assert.ok(names.length >= 15, 'the sprite set should be complete');
 
@@ -259,7 +276,7 @@ test('the generated sprite file is valid and complete', { skip: SKIP }, () => {
 
   // And it must actually render.
   const { svg } = render(`@startuml
-!include ${LIB}/Arch_Sprites.puml
+!include ${LIB}/src/Arch_Sprites.puml
 rectangle "<$arch_database>\\n<b>DB</b>" as a
 rectangle "<$arch_topic>\\n<b>Topic</b>" as b
 a --> b

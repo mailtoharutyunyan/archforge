@@ -1,3 +1,17 @@
+' Archforge for PlantUML — numbered interactions
+'
+' GENERATED and SELF-CONTAINED. Do not edit; edit assets/plantuml/src/ and
+' run `node tools/build-plantuml.mjs`.
+'
+' Include it and nothing else — locally or straight from a URL:
+'
+'   !include Arch_Dynamic.puml
+'   !include https://raw.githubusercontent.com/<owner>/<repo>/main/assets/plantuml/Arch_Dynamic.puml
+'
+' No other files are fetched, no flags are needed, and a fork or a tag
+' works without editing anything.
+'
+' Licence: Apache-2.0.
 ' Archforge for PlantUML — dynamic / interaction level
 '
 '   !include https://<you>.github.io/archforge/plantuml/Arch_Dynamic.puml
@@ -14,10 +28,32 @@
 '
 ' Licence: Apache-2.0.
 
-!if %variable_exists("ARCH_DYNAMIC_INCLUDED")
-!return
-!endif
-!$ARCH_DYNAMIC_INCLUDED = 1
+' Where the rest of the library is loaded from.
+'
+' Remote use needs absolute URLs: PlantUML does not resolve a relative
+' `!include` against a parent that was itself fetched over http, so a chain of
+' relative includes fails as soon as the entry point is a URL. Local use needs
+' the opposite. So both are provided, switched by a flag, exactly as
+' C4-PlantUML does:
+'
+'   remote (default)  !include <base>/Arch_Container.puml
+'   local             plantuml -DRELATIVE_INCLUDE="." your-diagram.puml
+'
+' Override the base to point at your own fork or a vendored copy:
+'   plantuml -DARCH_INCLUDE_BASE="https://example.com/plantuml" ...
+' Archforge for PlantUML — container level
+'
+'   !include https://<you>.github.io/archforge/plantuml/Arch_Container.puml
+'
+'   Person(customer, "Customer")
+'   System_Boundary(payments, "Payment Platform") {
+'     Container(api, "Payment API", "Java 21 / Spring Boot", "Authorises payments")
+'     ContainerDb(db, "Payments DB", "PostgreSQL 16", "Stores payments")
+'     ContainerQueue(events, "payment.events", "Apache Kafka")
+'   }
+'   Rel(customer, api, "Pays", "HTTPS/JSON")
+'
+' Licence: Apache-2.0.
 
 ' Where the rest of the library is loaded from.
 '
@@ -32,12 +68,677 @@
 '
 ' Override the base to point at your own fork or a vendored copy:
 '   plantuml -DARCH_INCLUDE_BASE="https://example.com/plantuml" ...
-!$ARCH_INCLUDE_BASE ?= "https://raw.githubusercontent.com/mailtoharutyunyan/archforge/main/assets/plantuml"
-!if %variable_exists("RELATIVE_INCLUDE")
-  !include ./Arch_Container.puml
-!else
-  !include $ARCH_INCLUDE_BASE/Arch_Container.puml
-!endif
+' Archforge for PlantUML — system context level
+'
+'   !include https://<you>.github.io/archforge/plantuml/Arch_Context.puml
+'
+'   Person(customer, "Customer", "Buys things")
+'   System(payments, "Payment Platform", "Takes payments")
+'   System_Ext(cards, "Card Network", "Authorises cards")
+'   Rel(customer, payments, "Pays", "HTTPS")
+'
+' Licence: Apache-2.0.
+
+' Where the rest of the library is loaded from.
+'
+' Remote use needs absolute URLs: PlantUML does not resolve a relative
+' `!include` against a parent that was itself fetched over http, so a chain of
+' relative includes fails as soon as the entry point is a URL. Local use needs
+' the opposite. So both are provided, switched by a flag, exactly as
+' C4-PlantUML does:
+'
+'   remote (default)  !include <base>/Arch_Container.puml
+'   local             plantuml -DRELATIVE_INCLUDE="." your-diagram.puml
+'
+' Override the base to point at your own fork or a vendored copy:
+'   plantuml -DARCH_INCLUDE_BASE="https://example.com/plantuml" ...
+' Archforge for PlantUML — shared foundation
+'
+' This is the C4-PlantUML-style half of Archforge: a macro library you include
+' from a .puml file so you can write C4 diagrams in PlantUML directly, with the
+' same palette and structural glyphs the Archforge renderer uses.
+'
+' You do not need the rest of Archforge to use this. Conversely, if you want
+' architecture linting, drift detection against real source code, or the web
+' editor, model your system in the .arch DSL instead and use `arch render
+' --format puml` to produce PlantUML from it.
+'
+' Do not include this file directly — include one of the level files, which
+' pull this in and add the macros appropriate to that level:
+'
+'   Arch_Context.puml      people and systems
+'   Arch_Container.puml    + containers
+'   Arch_Component.puml    + components
+'   Arch_Deployment.puml   + deployment and infrastructure nodes
+'   Arch_Dynamic.puml      + numbered interactions
+'
+' Licence: Apache-2.0.
+
+' Where the rest of the library is loaded from.
+'
+' Remote use needs absolute URLs: PlantUML does not resolve a relative
+' `!include` against a parent that was itself fetched over http, so a chain of
+' relative includes fails as soon as the entry point is a URL. Local use needs
+' the opposite. So both are provided, switched by a flag, exactly as
+' C4-PlantUML does:
+'
+'   remote (default)  !include <base>/Arch_Container.puml
+'   local             plantuml -DRELATIVE_INCLUDE="." your-diagram.puml
+'
+' Override the base to point at your own fork or a vendored copy:
+'   plantuml -DARCH_INCLUDE_BASE="https://example.com/plantuml" ...
+' Archforge sprites — GENERATED by tools/build-plantuml.mjs, do not edit.
+'
+' Structural glyphs as PlantUML sprites. Use them with the $sprite argument:
+'
+'   Container(api, "Payment API", "Java / Spring Boot", "Handles payments", $sprite="arch_api")
+'
+' For technology logos, include one of PlantUML's own sprite libraries and pass
+' the sprite name the same way, e.g.:
+'
+'   !include <tupadr3/devicons2/java>
+'   Container(api, "Payment API", "Java", "", $sprite="java")
+'
+' Licence: CC0-1.0. These glyphs were drawn for this project.
+
+sprite $arch_api [16x16/16] {
+0000000000000000
+0000000000000000
+0FFFFFFFFFFFFFF0
+0FFFFFFFFFFFFFF0
+0FF0000000000FF0
+0FF00FFFFFF00FF0
+0FF00FFFFFF00FF0
+0FF0000000000FF0
+0FFFFFFFFFFFFFF0
+0FFFFFFFFFFFFFF0
+0000000000000000
+0000FF0000FF0000
+0000FF0000FF0000
+0000000000000000
+0000000000000000
+0000000000000000
+}
+
+sprite $arch_browser [16x16/16] {
+0000000000000000
+0FFFFFFFFFFFFFF0
+0FFFFFFFFFFFFFF0
+0FF00FF00FF00FF0
+0FFFFFFFFFFFFFF0
+0FF0000000000FF0
+0FF0000000000FF0
+0FF0000000000FF0
+0FF0000000000FF0
+0FF0000000000FF0
+0FF0000000000FF0
+0FFFFFFFFFFFFFF0
+0FFFFFFFFFFFFFF0
+0000000000000000
+0000000000000000
+0000000000000000
+}
+
+sprite $arch_cache [16x16/16] {
+0000000000000000
+000000000FFF0000
+00000000FFFF0000
+0000000FFFF00000
+000000FFFF000000
+00000FFFFFF80000
+0000FFFFFFFF0000
+000FFFF000FFF000
+00FFFF0000000000
+0FFFF00000000000
+0FFF000000000000
+0000000000000000
+00FFFFFFFFFFFF00
+00FFFFFFFFFFFF00
+0000000000000000
+0000000000000000
+}
+
+sprite $arch_component [16x16/16] {
+0000000000000000
+0000000000000000
+000FFFFFFFFFFF00
+000FFFFFFFFFFF00
+0FFFF0000000FFF0
+0FFFF0000000FFF0
+000FFFFFFFFFFF00
+000FFFFFFFFFFF00
+0FFFF0000000FFF0
+0FFFF0000000FFF0
+000FFFFFFFFFFF00
+000FFFFFFFFFFF00
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+}
+
+sprite $arch_container [16x16/16] {
+0000000000000000
+0000000FF0000000
+0000FFFFFFFF0000
+00FFFFFFFFFFFF00
+0FFFFFFFFFFFFFF0
+0FFF0FFFFFF0FFF0
+0FFF00FFFF00FFF0
+0FFF000FF000FFF0
+0FFF000FF000FFF0
+0FFF000FF000FFF0
+0FFF000FF000FFF0
+0FFFFFFFFFFFFFF0
+00FFFFFFFFFFFF00
+0000FFFFFFFF0000
+0000000FF0000000
+0000000000000000
+}
+
+sprite $arch_database [16x16/16] {
+0000000000000000
+00088FFFFFF88000
+00FFFFFFFFFFFF00
+0FFFF000000FFFF0
+0FFFFFFFFFFFFFF0
+00FFFFFFFFFFFF00
+00088FFFFFF88000
+0FFFFFFFFFFFFFF0
+0FFFFFFFFFFFFFF0
+00FFFFFFFFFFFF00
+00088FFFFFF88000
+0FFFFFFFFFFFFFF0
+0FFFF000000FFFF0
+00FFFFFFFFFFFF00
+00088FFFFFF88000
+0000000000000000
+}
+
+sprite $arch_external [16x16/16] {
+0000000000000000
+088FFFFFFFFFF880
+0FFFFFFFFFFFFFF0
+0FF0000000000FF0
+0FF0000000000FF0
+0FF0000FF0000FF0
+0FF000FFFF000FF0
+0FF00FF00FF00FF0
+0FF00FF00FF00FF0
+0FF00FFFFFF00FF0
+0FF0000000000FF0
+0FFFFFFFFFFFFFF0
+088FFFFFFFFFF880
+0000000000000000
+0000000000000000
+0000000000000000
+}
+
+sprite $arch_function [16x16/16] {
+0000000000000000
+000000000FFFFF00
+00000000FFF00000
+0000000FFF000000
+000000FFF0000000
+00FFFFFFFFF00000
+00000FFF00000000
+0000FFF000000000
+000FFF0000000000
+00FFF00000000000
+0FFFFF0000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+0000000000000000
+}
+
+sprite $arch_mobile [16x16/16] {
+0000000000000000
+0000FFFFFFFF0000
+0000FFFFFFFF0000
+0000FF0000FF0000
+0000FF0000FF0000
+0000FF0000FF0000
+0000FF0000FF0000
+0000FF0000FF0000
+0000FF0000FF0000
+0000FF0000FF0000
+0000FF0000FF0000
+0000FF0FF0FF0000
+0000FFFFFFFF0000
+0000FFFFFFFF0000
+0000000000000000
+0000000000000000
+}
+
+sprite $arch_node [16x16/16] {
+0000000000000000
+0FFFFFFFFFFFFFF0
+0FFFFFFFFFFFFFF0
+0FF00FFFFFF00FF0
+0FFFFFFFFFFFFFF0
+0000000000000000
+0FFFFFFFFFFFFFF0
+0FFFFFFFFFFFFFF0
+0FF00FFFFFF00FF0
+0FFFFFFFFFFFFFF0
+0000000000000000
+0FFFFFFFFFFFFFF0
+0FFFFFFFFFFFFFF0
+0FF00FFFFFF00FF0
+0FFFFFFFFFFFFFF0
+0000000000000000
+}
+
+sprite $arch_person [16x16/16] {
+0000000000000000
+0000088FFFF80000
+0000FFFFFFFFFF00
+000FFFF0000FFFF0
+000FFF000000FFF0
+000FFF000000FFF0
+000FFFF0000FFFF0
+0000FFFFFFFFFF00
+0000088FFFF80000
+0000000000000000
+0088FFFFFFFFFF80
+0FFFFFFFFFFFFFFF
+FFFFFFFFFFFFFFF8
+FFFFFFFFFFFFFFF0
+FFFFFFFFFFFFFF00
+0000000000000000
+}
+
+sprite $arch_queue [16x16/16] {
+0000000000000000
+0000000000000000
+0FFFFFFFFFFFFFF0
+0FFFFFFFFFFFFFF0
+0FF00FF00FF00FF0
+0FF00FF00FF00FF0
+0FF00FF00FF00FF0
+0FF00FF00FF00FF0
+0FF00FF00FF00FF0
+0FF00FF00FF00FF0
+0FFFFFFFFFFFFFF0
+0FFFFFFFFFFFFFF0
+0000000000000000
+00000FFFFFF00000
+0000000000000000
+0000000000000000
+}
+
+sprite $arch_service [16x16/16] {
+0000000000000000
+000000FFFF000000
+0000FFFFFFFF0000
+000FFF0000FFF000
+00FFF000000FFF00
+0FFF00FFFF00FFF0
+0FFF0FFFFFF0FFF0
+0FFF0FFFFFF0FFF0
+0FFF00FFFF00FFF0
+00FFF000000FFF00
+000FFF0000FFF000
+0000FFFFFFFF0000
+000000FFFF000000
+0000000000000000
+0000000000000000
+0000000000000000
+}
+
+sprite $arch_system [16x16/16] {
+0000000000000000
+088FFFFFFFFFF880
+0FFFFFFFFFFFFFF0
+0FF0000000000FF0
+0FF00FFFFFF00FF0
+0FF00FFFFFF00FF0
+0FF00FFFFFF00FF0
+0FF0000000000FF0
+0FF00FFFFFF00FF0
+0FF00FFFFFF00FF0
+0FF00FFFFFF00FF0
+0FF0000000000FF0
+0FFFFFFFFFFFFFF0
+088FFFFFFFFFF880
+0000000000000000
+0000000000000000
+}
+
+sprite $arch_topic [16x16/16] {
+0000000000000000
+00000FFFFFF00000
+000FFFFFFFFFF000
+00FFFF0000FFFF00
+0FFF00000000FFF0
+0FF0000FF0000FF0
+0FF000FFFF000FF0
+0FF000FFFF000FF0
+0FF0000FF0000FF0
+0FFF00000000FFF0
+00FFFF0000FFFF00
+000FFFFFFFFFF000
+00000FFFFFF00000
+0000000000000000
+0000000000000000
+0000000000000000
+}
+
+' ---------------------------------------------------------------- palette
+'
+' The same values the Archforge SVG renderer uses, so a diagram drawn here and
+' one rendered from a model look like the same product.
+
+!$ARCH_PERSON        = "#4F46E5"
+!$ARCH_SYSTEM        = "#2563EB"
+!$ARCH_CONTAINER     = "#0891B2"
+!$ARCH_COMPONENT     = "#0284C7"
+!$ARCH_DATABASE      = "#7C3AED"
+!$ARCH_CACHE         = "#DB2777"
+!$ARCH_QUEUE         = "#D97706"
+!$ARCH_TOPIC         = "#CA8A04"
+!$ARCH_API           = "#0D9488"
+!$ARCH_EXTERNAL      = "#64748B"
+!$ARCH_NODE_BG       = "#E2E8F0"
+!$ARCH_NODE_INK      = "#0F172A"
+
+!$ARCH_INK           = "#0F172A"
+!$ARCH_INK_MUTED     = "#475569"
+!$ARCH_ON_COLOUR     = "#FFFFFF"
+!$ARCH_LINE          = "#94A3B8"
+!$ARCH_BOUNDARY_BG   = "#F8FAFC"
+!$ARCH_BOUNDARY_LINE = "#CBD5E1"
+!$ARCH_BG            = "#FFFFFF"
+
+' Type sizes, matching the renderer's scale.
+!$ARCH_NAME_SIZE  = 13
+!$ARCH_META_SIZE  = 10
+!$ARCH_DESCR_SIZE = 10
+!$ARCH_REL_SIZE   = 10
+
+' ------------------------------------------------------------------ labels
+
+' Builds an element label: optional sprite, bold name, [technology], italic
+' description. Empty parts are omitted rather than leaving blank lines, which
+' is what keeps a label with no description from looking broken.
+!function $archLabel($label, $techn="", $descr="", $sprite="")
+  !$out = ""
+  !if (%strlen($sprite) > 0)
+    !$out = $out + "<$" + $sprite + ">\n"
+  !endif
+  !$out = $out + "<b>" + $label + "</b>"
+  !if (%strlen($techn) > 0)
+    !$out = $out + "\n<size:" + $ARCH_META_SIZE + ">[" + $techn + "]</size>"
+  !endif
+  !if (%strlen($descr) > 0)
+    !$out = $out + "\n<size:" + $ARCH_DESCR_SIZE + "><i>" + $descr + "</i></size>"
+  !endif
+  !return $out
+!endfunction
+
+' Boundary label: name plus a quiet type line.
+!function $archBoundaryLabel($label, $type)
+  !$out = "<b>" + $label + "</b>"
+  !if (%strlen($type) > 0)
+    !$out = $out + "\n<size:" + $ARCH_META_SIZE + ">[" + $type + "]</size>"
+  !endif
+  !return $out
+!endfunction
+
+' Relationship label: description plus optional [technology].
+!function $archRelLabel($label, $techn="")
+  !$out = $label
+  !if (%strlen($techn) > 0)
+    !$out = $out + "\n<size:" + $ARCH_REL_SIZE + ">[" + $techn + "]</size>"
+  !endif
+  !return $out
+!endfunction
+
+' ------------------------------------------------------------------ styling
+
+' Stereotypes carry the styling but must not be drawn: «arch_container» printed
+' on every box is scaffolding leaking into the output.
+hide stereotype
+
+skinparam backgroundColor $ARCH_BG
+skinparam defaultFontName "Helvetica Neue"
+skinparam defaultFontSize 12
+skinparam defaultTextAlignment left
+skinparam shadowing false
+skinparam roundCorner 10
+skinparam nodesep 42
+skinparam ranksep 56
+skinparam wrapWidth 220
+
+skinparam ArrowColor $ARCH_LINE
+skinparam ArrowFontColor $ARCH_INK_MUTED
+skinparam ArrowFontSize $ARCH_REL_SIZE
+skinparam ArrowThickness 1.4
+
+skinparam rectangle {
+  FontColor $ARCH_ON_COLOUR
+  BorderThickness 1
+
+  BackgroundColor<<arch_system>> $ARCH_SYSTEM
+  BorderColor<<arch_system>> $ARCH_SYSTEM
+  BackgroundColor<<arch_container>> $ARCH_CONTAINER
+  BorderColor<<arch_container>> $ARCH_CONTAINER
+  BackgroundColor<<arch_component>> $ARCH_COMPONENT
+  BorderColor<<arch_component>> $ARCH_COMPONENT
+  BackgroundColor<<arch_api>> $ARCH_API
+  BorderColor<<arch_api>> $ARCH_API
+  BackgroundColor<<arch_external>> $ARCH_EXTERNAL
+  BorderColor<<arch_external>> $ARCH_EXTERNAL
+
+  BackgroundColor<<arch_node>> $ARCH_NODE_BG
+  BorderColor<<arch_node>> $ARCH_EXTERNAL
+  FontColor<<arch_node>> $ARCH_NODE_INK
+
+  ' Boundaries: a light panel with a dashed hairline, so nesting reads as
+  ' depth rather than as another box competing with its contents.
+  BackgroundColor<<arch_boundary>> $ARCH_BOUNDARY_BG
+  BorderColor<<arch_boundary>> $ARCH_BOUNDARY_LINE
+  FontColor<<arch_boundary>> $ARCH_INK
+  BorderStyle<<arch_boundary>> dashed
+}
+
+skinparam database {
+  FontColor $ARCH_ON_COLOUR
+  BackgroundColor<<arch_db>> $ARCH_DATABASE
+  BorderColor<<arch_db>> $ARCH_DATABASE
+  BackgroundColor<<arch_cache>> $ARCH_CACHE
+  BorderColor<<arch_cache>> $ARCH_CACHE
+}
+
+skinparam queue {
+  FontColor $ARCH_ON_COLOUR
+  BackgroundColor<<arch_queue>> $ARCH_QUEUE
+  BorderColor<<arch_queue>> $ARCH_QUEUE
+  BackgroundColor<<arch_topic>> $ARCH_TOPIC
+  BorderColor<<arch_topic>> $ARCH_TOPIC
+}
+
+skinparam actor {
+  BackgroundColor<<arch_person>> $ARCH_PERSON
+  BorderColor<<arch_person>> $ARCH_PERSON
+  FontColor $ARCH_INK
+}
+
+skinparam legend {
+  BackgroundColor $ARCH_BOUNDARY_BG
+  BorderColor $ARCH_BOUNDARY_LINE
+  FontColor $ARCH_INK_MUTED
+  FontSize 10
+}
+
+' ----------------------------------------------------------------- layout
+
+!unquoted procedure LAYOUT_TOP_DOWN()
+top to bottom direction
+!endprocedure
+
+!unquoted procedure LAYOUT_LEFT_RIGHT()
+left to right direction
+!endprocedure
+
+!unquoted procedure LAYOUT_WITH_LEGEND()
+!$ARCH_SHOW_LEGEND = 1
+!endprocedure
+
+' --------------------------------------------------------------- boundaries
+'
+' Boundaries are `!unquoted` so the caller's `{` attaches to the expansion:
+'
+'   System_Boundary(payments, "Payments") {
+'     Container(api, "Payment API", "Java")
+'   }
+
+!unquoted procedure Boundary($alias, $label, $type="")
+rectangle "$archBoundaryLabel($label, $type)" <<arch_boundary>> as $alias
+!endprocedure
+
+!unquoted procedure System_Boundary($alias, $label)
+rectangle "$archBoundaryLabel($label, "system")" <<arch_boundary>> as $alias
+!endprocedure
+
+!unquoted procedure Container_Boundary($alias, $label)
+rectangle "$archBoundaryLabel($label, "container")" <<arch_boundary>> as $alias
+!endprocedure
+
+!unquoted procedure Enterprise_Boundary($alias, $label)
+rectangle "$archBoundaryLabel($label, "enterprise")" <<arch_boundary>> as $alias
+!endprocedure
+
+' ------------------------------------------------------------ relationships
+
+!unquoted procedure Rel($from, $to, $label="", $techn="")
+$from --> $to : $archRelLabel($label, $techn)
+!endprocedure
+
+!unquoted procedure Rel_Back($from, $to, $label="", $techn="")
+$from <-- $to : $archRelLabel($label, $techn)
+!endprocedure
+
+!unquoted procedure BiRel($from, $to, $label="", $techn="")
+$from <--> $to : $archRelLabel($label, $techn)
+!endprocedure
+
+!unquoted procedure Rel_D($from, $to, $label="", $techn="")
+$from -down-> $to : $archRelLabel($label, $techn)
+!endprocedure
+
+!unquoted procedure Rel_U($from, $to, $label="", $techn="")
+$from -up-> $to : $archRelLabel($label, $techn)
+!endprocedure
+
+!unquoted procedure Rel_L($from, $to, $label="", $techn="")
+$from -left-> $to : $archRelLabel($label, $techn)
+!endprocedure
+
+!unquoted procedure Rel_R($from, $to, $label="", $techn="")
+$from -right-> $to : $archRelLabel($label, $techn)
+!endprocedure
+
+' An async relationship, drawn dashed to match the renderer's `tag async`.
+!unquoted procedure Rel_Async($from, $to, $label="", $techn="")
+$from ..> $to : $archRelLabel($label, $techn)
+!endprocedure
+
+' ----------------------------------------------------------------- legend
+
+!unquoted procedure SHOW_LEGEND()
+legend right
+  |<back:$ARCH_PERSON>   </back>| person |
+  |<back:$ARCH_SYSTEM>   </back>| system |
+  |<back:$ARCH_CONTAINER>   </back>| container |
+  |<back:$ARCH_COMPONENT>   </back>| component |
+  |<back:$ARCH_DATABASE>   </back>| database |
+  |<back:$ARCH_QUEUE>   </back>| queue / topic |
+  |<back:$ARCH_EXTERNAL>   </back>| external |
+endlegend
+!endprocedure
+
+' ------------------------------------------------------------------ people
+
+!unquoted procedure Person($alias, $label, $descr="", $sprite="arch_person")
+actor "$archLabel($label, "", $descr, $sprite)" <<arch_person>> as $alias
+!endprocedure
+
+!unquoted procedure Person_Ext($alias, $label, $descr="", $sprite="arch_person")
+actor "$archLabel($label, "external", $descr, $sprite)" <<arch_person>> as $alias
+!endprocedure
+
+' ----------------------------------------------------------------- systems
+
+!unquoted procedure System($alias, $label, $descr="", $sprite="arch_system")
+rectangle "$archLabel($label, "", $descr, $sprite)" <<arch_system>> as $alias
+!endprocedure
+
+!unquoted procedure System_Ext($alias, $label, $descr="", $sprite="arch_external")
+rectangle "$archLabel($label, "external", $descr, $sprite)" <<arch_external>> as $alias
+!endprocedure
+
+!unquoted procedure SystemDb($alias, $label, $descr="", $sprite="arch_database")
+database "$archLabel($label, "", $descr, $sprite)" <<arch_db>> as $alias
+!endprocedure
+
+!unquoted procedure SystemDb_Ext($alias, $label, $descr="", $sprite="arch_database")
+database "$archLabel($label, "external", $descr, $sprite)" <<arch_db>> as $alias
+!endprocedure
+
+!unquoted procedure SystemQueue($alias, $label, $descr="", $sprite="arch_queue")
+queue "$archLabel($label, "", $descr, $sprite)" <<arch_queue>> as $alias
+!endprocedure
+
+!unquoted procedure SystemQueue_Ext($alias, $label, $descr="", $sprite="arch_queue")
+queue "$archLabel($label, "external", $descr, $sprite)" <<arch_queue>> as $alias
+!endprocedure
+
+!unquoted procedure Container($alias, $label, $techn="", $descr="", $sprite="arch_container")
+rectangle "$archLabel($label, $techn, $descr, $sprite)" <<arch_container>> as $alias
+!endprocedure
+
+!unquoted procedure Container_Ext($alias, $label, $techn="", $descr="", $sprite="arch_external")
+rectangle "$archLabel($label, $techn, $descr, $sprite)" <<arch_external>> as $alias
+!endprocedure
+
+!unquoted procedure ContainerApi($alias, $label, $techn="", $descr="", $sprite="arch_api")
+rectangle "$archLabel($label, $techn, $descr, $sprite)" <<arch_api>> as $alias
+!endprocedure
+
+!unquoted procedure ContainerDb($alias, $label, $techn="", $descr="", $sprite="arch_database")
+database "$archLabel($label, $techn, $descr, $sprite)" <<arch_db>> as $alias
+!endprocedure
+
+!unquoted procedure ContainerDb_Ext($alias, $label, $techn="", $descr="", $sprite="arch_database")
+database "$archLabel($label, $techn, $descr, $sprite)" <<arch_db>> as $alias
+!endprocedure
+
+!unquoted procedure ContainerCache($alias, $label, $techn="", $descr="", $sprite="arch_cache")
+database "$archLabel($label, $techn, $descr, $sprite)" <<arch_cache>> as $alias
+!endprocedure
+
+!unquoted procedure ContainerQueue($alias, $label, $techn="", $descr="", $sprite="arch_queue")
+queue "$archLabel($label, $techn, $descr, $sprite)" <<arch_queue>> as $alias
+!endprocedure
+
+!unquoted procedure ContainerTopic($alias, $label, $techn="", $descr="", $sprite="arch_topic")
+queue "$archLabel($label, $techn, $descr, $sprite)" <<arch_topic>> as $alias
+!endprocedure
+
+!unquoted procedure ContainerBrowser($alias, $label, $techn="", $descr="", $sprite="arch_browser")
+rectangle "$archLabel($label, $techn, $descr, $sprite)" <<arch_container>> as $alias
+!endprocedure
+
+!unquoted procedure ContainerMobile($alias, $label, $techn="", $descr="", $sprite="arch_mobile")
+rectangle "$archLabel($label, $techn, $descr, $sprite)" <<arch_container>> as $alias
+!endprocedure
+
+!unquoted procedure ContainerFunction($alias, $label, $techn="", $descr="", $sprite="arch_function")
+rectangle "$archLabel($label, $techn, $descr, $sprite)" <<arch_container>> as $alias
+!endprocedure
 
 !$ARCH_INDEX = 0
 
@@ -58,3 +759,4 @@ $from --> $to : <b>$ARCH_INDEX.</b> $archRelLabel($label, $techn)
 !$ARCH_INDEX = $ARCH_INDEX + 1
 $from <-- $to : <b>$ARCH_INDEX.</b> $archRelLabel($label, $techn)
 !endprocedure
+

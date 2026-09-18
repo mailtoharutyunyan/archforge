@@ -1,0 +1,50 @@
+' Archforge for PlantUML — deployment level
+'
+'   !include https://<you>.github.io/archforge/plantuml/Arch_Deployment.puml
+'
+'   Deployment_Node(aws, "AWS", "eu-central-1") {
+'     Deployment_Node(eks, "EKS", "Kubernetes 1.31") {
+'       Container(api, "Payment API", "Java 21", "3 replicas")
+'     }
+'     Infrastructure_Node(rds, "RDS", "PostgreSQL, Multi-AZ")
+'   }
+'
+' Licence: Apache-2.0.
+
+!if %variable_exists("ARCH_DEPLOYMENT_INCLUDED")
+!return
+!endif
+!$ARCH_DEPLOYMENT_INCLUDED = 1
+
+' Where the rest of the library is loaded from.
+'
+' Remote use needs absolute URLs: PlantUML does not resolve a relative
+' `!include` against a parent that was itself fetched over http, so a chain of
+' relative includes fails as soon as the entry point is a URL. Local use needs
+' the opposite. So both are provided, switched by a flag, exactly as
+' C4-PlantUML does:
+'
+'   remote (default)  !include <base>/Arch_Container.puml
+'   local             plantuml -DRELATIVE_INCLUDE="." your-diagram.puml
+'
+' Override the base to point at your own fork or a vendored copy:
+'   plantuml -DARCH_INCLUDE_BASE="https://example.com/plantuml" ...
+!$ARCH_INCLUDE_BASE ?= "https://raw.githubusercontent.com/mailtoharutyunyan/archforge/main/assets/plantuml"
+!if %variable_exists("RELATIVE_INCLUDE")
+  !include ./Arch_Container.puml
+!else
+  !include $ARCH_INCLUDE_BASE/Arch_Container.puml
+!endif
+
+' Deployment nodes nest, so they are `!unquoted` and take the caller's `{`.
+!unquoted procedure Deployment_Node($alias, $label, $techn="", $descr="")
+rectangle "$archLabel($label, $techn, $descr, "arch_node")" <<arch_node>> as $alias
+!endprocedure
+
+!unquoted procedure Node($alias, $label, $techn="", $descr="")
+rectangle "$archLabel($label, $techn, $descr, "arch_node")" <<arch_node>> as $alias
+!endprocedure
+
+!unquoted procedure Infrastructure_Node($alias, $label, $techn="", $descr="")
+rectangle "$archLabel($label, $techn, $descr, "arch_node")" <<arch_node>> as $alias
+!endprocedure

@@ -341,7 +341,7 @@ const sprites = Object.entries(GLYPHS)
   })
   .join('\n\n');
 
-const target = join(root, 'assets', 'plantuml', 'Arch_Sprites.puml');
+const target = join(root, 'assets', 'plantuml', 'src', 'Arch_Sprites.puml');
 await mkdir(dirname(target), { recursive: true });
 await writeFile(target, `${header}\n${sprites}\n`);
 
@@ -350,3 +350,112 @@ process.stdout.write(
     Object.keys(GLYPHS).length
   } sprites\n`,
 );
+
+
+// ---------------------------------------------------------------------------
+// Flatten the modular sources into self-contained distributables.
+// ---------------------------------------------------------------------------
+//
+// Each published file inlines everything it needs, so a consumer writes one
+// `!include <url>` and nothing else. That removes the whole class of problem a
+// chained library has:
+//
+//   - PlantUML does not resolve a relative `!include` against a parent fetched
+//     over http, so a chain breaks the moment the entry point is a URL
+//   - working around that with absolute URLs bakes one repository and branch
+//     into the files, so a fork or a tag silently loads someone else's copy
+//   - a chain is also 3-4 HTTP round trips per diagram instead of one
+//
+// The modular sources under src/ stay the thing a human edits.
+
+import { readFile as readSource } from 'node:fs/promises';
+
+const SRC = join(root, 'assets', 'plantuml', 'src');
+const OUT = join(root, 'assets', 'plantuml');
+
+/** Recursively inlines local `!include`s, once each, stripping the scaffolding. */
+async function flatten(entry, seen = new Set()) {
+  if (seen.has(entry)) return '';
+  seen.add(entry);
+
+  const text = await readSource(join(SRC, entry), 'utf8');
+  const out = [];
+  const lines = text.split(/\r?\n/);
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Include-once guards are meaningless once flattened.
+    if (/^!if\s+%variable_exists\("ARCH_\w+_INCLUDED"\)/.test(trimmed)) {
+      while (i < lines.length && !/^!endif/.test(lines[i].trim())) i += 1;
+      continue;
+    }
+    if (/^!\$ARCH_\w+_INCLUDED\s*=/.test(trimmed)) continue;
+
+    // The dual-mode include block: inline the target instead.
+    if (/^!if\s+%variable_exists\("RELATIVE_INCLUDE"\)/.test(trimmed)) {
+      const block = [];
+      while (i < lines.length && !/^!endif/.test(lines[i].trim())) {
+        block.push(lines[i]);
+        i += 1;
+      }
+      const target = block
+        .map((l) => /!include\s+\.\/(Arch_\w+\.puml)/.exec(l.trim()))
+        .find(Boolean);
+      if (target) out.push(await flatten(target[1], seen));
+      continue;
+    }
+
+    // A plain local include.
+    const plain = /^!include\s+(?:\.\/)?(Arch_\w+\.puml)$/.exec(trimmed);
+    if (plain) {
+      out.push(await flatten(plain[1], seen));
+      continue;
+    }
+
+    // The include-base variable and its explanatory comment are now dead.
+    if (/^!\$ARCH_INCLUDE_BASE\s*\?=/.test(trimmed)) continue;
+
+    out.push(line);
+  }
+  return out.join('\n');
+}
+
+const ENTRIES = [
+  ['Arch_Context.puml', 'people and systems'],
+  ['Arch_Container.puml', 'containers'],
+  ['Arch_Component.puml', 'components'],
+  ['Arch_Deployment.puml', 'deployment and infrastructure nodes'],
+  ['Arch_Dynamic.puml', 'numbered interactions'],
+];
+
+for (const [entry, scope] of ENTRIES) {
+  const body = await flatten(entry);
+  const banner = [
+    `' Archforge for PlantUML — ${scope}`,
+    "'",
+    "' GENERATED and SELF-CONTAINED. Do not edit; edit assets/plantuml/src/ and",
+    "' run `node tools/build-plantuml.mjs`.",
+    "'",
+    "' Include it and nothing else — locally or straight from a URL:",
+    "'",
+    `'   !include ${entry}`,
+    `'   !include https://raw.githubusercontent.com/<owner>/<repo>/main/assets/plantuml/${entry}`,
+    "'",
+    "' No other files are fetched, no flags are needed, and a fork or a tag",
+    "' works without editing anything.",
+    "'",
+    "' Licence: Apache-2.0.",
+    '',
+  ].join('\n');
+
+  // Collapse the runs of blank lines that inlining leaves behind.
+  const tidy = body.replace(/\n{3,}/g, '\n\n').replace(/^\s*\n/, '');
+  await writeFile(join(OUT, entry), `${banner}${tidy}\n`);
+  process.stdout.write(
+    `\x1b[32m✓\x1b[0m assets/plantuml/${entry} — self-contained, ${
+      (`${banner}${tidy}`).split('\n').length
+    } lines\n`,
+  );
+}

@@ -1,0 +1,60 @@
+' Archforge for PlantUML — dynamic / interaction level
+'
+'   !include https://<you>.github.io/archforge/plantuml/Arch_Dynamic.puml
+'
+'   Person(customer, "Customer")
+'   Container(api, "Payment API", "Java")
+'   ContainerDb(db, "Payments DB", "PostgreSQL")
+'
+'   RelIndex(customer, api, "Submits card", "HTTPS")
+'   RelIndex(api, db, "Persists the intent", "JDBC")
+'
+' RelIndex() numbers each interaction in the order you write it, which is what
+' makes a dynamic view readable. Call ResetIndex() to start again at 1.
+'
+' Licence: Apache-2.0.
+
+!if %variable_exists("ARCH_DYNAMIC_INCLUDED")
+!return
+!endif
+!$ARCH_DYNAMIC_INCLUDED = 1
+
+' Where the rest of the library is loaded from.
+'
+' Remote use needs absolute URLs: PlantUML does not resolve a relative
+' `!include` against a parent that was itself fetched over http, so a chain of
+' relative includes fails as soon as the entry point is a URL. Local use needs
+' the opposite. So both are provided, switched by a flag, exactly as
+' C4-PlantUML does:
+'
+'   remote (default)  !include <base>/Arch_Container.puml
+'   local             plantuml -DRELATIVE_INCLUDE="." your-diagram.puml
+'
+' Override the base to point at your own fork or a vendored copy:
+'   plantuml -DARCH_INCLUDE_BASE="https://example.com/plantuml" ...
+!$ARCH_INCLUDE_BASE ?= "https://raw.githubusercontent.com/mailtoharutyunyan/archforge/main/assets/plantuml"
+!if %variable_exists("RELATIVE_INCLUDE")
+  !include ./Arch_Container.puml
+!else
+  !include $ARCH_INCLUDE_BASE/Arch_Container.puml
+!endif
+
+!$ARCH_INDEX = 0
+
+!unquoted procedure ResetIndex()
+!$ARCH_INDEX = 0
+!endprocedure
+
+!unquoted procedure SetIndex($value)
+!$ARCH_INDEX = $value - 1
+!endprocedure
+
+!unquoted procedure RelIndex($from, $to, $label="", $techn="")
+!$ARCH_INDEX = $ARCH_INDEX + 1
+$from --> $to : <b>$ARCH_INDEX.</b> $archRelLabel($label, $techn)
+!endprocedure
+
+!unquoted procedure RelIndex_Back($from, $to, $label="", $techn="")
+!$ARCH_INDEX = $ARCH_INDEX + 1
+$from <-- $to : <b>$ARCH_INDEX.</b> $archRelLabel($label, $techn)
+!endprocedure
